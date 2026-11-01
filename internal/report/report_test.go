@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 func TestRanking(t *testing.T) {

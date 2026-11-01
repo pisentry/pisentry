@@ -4,10 +4,10 @@
 <!-- include:head -->
 <title>Security: pisentry</title>
 <meta name="description" content="The pisentry threat model, what the agent is allowed to do on a host, how releases are built and signed, how to verify them, and how to report a vulnerability.">
-<link rel="canonical" href="https://mrguato.github.io/pisentry/security.html">
+<link rel="canonical" href="https://pisentry.dev/security.html">
 <meta property="og:title" content="pisentry security">
 <meta property="og:description" content="Threat model, host grants, signed releases and private vulnerability reporting.">
-<meta property="og:url" content="https://mrguato.github.io/pisentry/security.html">
+<meta property="og:url" content="https://pisentry.dev/security.html">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -89,7 +89,7 @@
         <li>Images ship SLSA provenance and an SBOM.</li>
         <li>Every GitHub Action is pinned to a commit SHA and every base image to a digest. Dependabot proposes updates and a human merges them.</li>
         <li>CI runs govulncheck, CodeQL, staticcheck, go vet and the race detector. A toolchain vulnerability fails the build. Every parser that reads attacker input has a fuzz target, run on every pull request and for longer every week.</li>
-        <li><a href="https://scorecard.dev/viewer/?uri=github.com/MrGuato/pisentry">OpenSSF Scorecard</a> grades the repository in public. Current score: <b data-build="scorecard">6.4</b>.</li>
+        <li><a href="https://scorecard.dev/viewer/?uri=github.com/pisentry/pisentry">OpenSSF Scorecard</a> grades the repository in public. Current score: <b data-build="scorecard">6.4</b>.</li>
       </ul>
 
       <h2 id="verify">Verify a release</h2>
@@ -98,17 +98,17 @@
       <p>From the release page, download <code>SHA256SUMS</code>, <code>SHA256SUMS.sigstore.json</code> and the binary for your board.</p>
       <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>cosign verify-blob \
   --bundle SHA256SUMS.sigstore.json \
-  --certificate-identity-regexp '^https://github.com/MrGuato/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github.com/pisentry/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS</pre></div>
       <h3>Image</h3>
       <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>cosign verify \
-  --certificate-identity-regexp '^https://github.com/MrGuato/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github.com/pisentry/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ghcr.io/mrguato/pisentry:&lt;tag&gt;</pre></div>
+  ghcr.io/pisentry/pisentry:&lt;tag&gt;</pre></div>
       <h3>Provenance</h3>
-      <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>docker buildx imagetools inspect ghcr.io/mrguato/pisentry:&lt;tag&gt; --format '{{json .Provenance}}'</pre></div>
+      <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>docker buildx imagetools inspect ghcr.io/pisentry/pisentry:&lt;tag&gt; --format '{{json .Provenance}}'</pre></div>
       <p>A pass means the file came from this repository's release workflow on a <code>v*</code> tag and has not changed since. The identity check is the part that matters. Without it, any GitHub workflow anywhere could have signed it.</p>
 
       <h2 id="limits">Known limits</h2>
@@ -124,13 +124,13 @@ sha256sum --check --ignore-missing SHA256SUMS</pre></div>
 
       <h2 id="report">Report a vulnerability</h2>
       <p>Use GitHub's private vulnerability reporting. Do not open a public issue, pull request or discussion for a suspected vulnerability.</p>
-      <p><a class="btn btn-primary" href="https://github.com/MrGuato/pisentry/security/advisories/new">Report in private</a></p>
+      <p><a class="btn btn-primary" href="https://github.com/pisentry/pisentry/security/advisories/new">Report in private</a></p>
       <ul>
         <li>Acknowledgement within 7 days.</li>
         <li>A fix or a mitigation plan for high and critical findings within 30 days of confirmation.</li>
         <li>Credit in the release notes and the advisory, unless you ask to stay anonymous.</li>
       </ul>
-      <p class="muted">In scope: crafted input that crashes, hangs or exhausts the agent; anything that makes it execute something, write outside its directories or read what it should not; suppressing or forging events beyond the known limits; escalation through the unit, the pod grants, the HTTP endpoint or the webhook sender; and release integrity. The full policy is in <a href="https://github.com/MrGuato/pisentry/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+      <p class="muted">In scope: crafted input that crashes, hangs or exhausts the agent; anything that makes it execute something, write outside its directories or read what it should not; suppressing or forging events beyond the known limits; escalation through the unit, the pod grants, the HTTP endpoint or the webhook sender; and release integrity. The full policy is in <a href="https://github.com/pisentry/pisentry/blob/main/SECURITY.md">SECURITY.md</a>.</p>
     </div>
   </div>
 </main>

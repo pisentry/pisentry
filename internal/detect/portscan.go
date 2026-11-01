@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/logsrc"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/logsrc"
 )
 
 // PortScan covers PS09. It reads kernel firewall LOG lines (UFW, firewalld

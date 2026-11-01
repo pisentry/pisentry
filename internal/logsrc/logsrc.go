@@ -17,8 +17,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/config"
-	"github.com/MrGuato/pisentry/internal/metrics"
+	"github.com/pisentry/pisentry/internal/config"
+	"github.com/pisentry/pisentry/internal/metrics"
 )
 
 // Line is one normalized log record.

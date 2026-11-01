@@ -13,7 +13,7 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 - Signed releases with Sigstore cosign: images are signed keyless by digest, and `SHA256SUMS` ships with a Sigstore bundle (`SHA256SUMS.sigstore.json`, requires cosign 3.0 or later). Verification steps are in SECURITY.md
 - Fuzzing of every attacker-facing parser (#32): syslog lines, journal JSON, `/proc/<pid>/stat`, `/proc/net/*`, the sanitizer (`engine.Truncate` properties), and the auth and port-scan matchers end to end through the engine with Event Schema v1 validation. `make fuzz`, 30 seconds per target on every pull request and 10 minutes per target weekly (`.github/workflows/fuzz.yml`)
 - Attack simulation in a container, no root needed: `make sim` (`scripts/sim-container/`) runs the agent in a `python:3-slim` container with file-mode logs and short detector intervals, fires harmless stand-ins for the eight simulatable categories, writes `events.jsonl`, `report.json`, `metrics.txt` and `top10.json`, and exits non-zero unless all eight fired. Proves detectors without root on a real host
-- Project website with a live roadmap: https://mrguato.github.io/pisentry/ (`site/`), built by `scripts/build-site.py` and published by the `pages` workflow. The roadmap and the live numbers are rendered from the GitHub API at build time, so the pages make no requests of their own and rebuild when a milestone or a roadmap issue changes
+- Project website with a live roadmap: https://pisentry.dev/ (`site/`), built by `scripts/build-site.py` and published by the `pages` workflow. The roadmap and the live numbers are rendered from the GitHub API at build time, so the pages make no requests of their own and rebuild when a milestone or a roadmap issue changes
 - Built-in rules embedded in the binary: `deploy/rules/default.json` holds the eight risky-sudo patterns (`PS04-SUDO-*`) and the miner name and pool argument lists (`PS06-MINER-*`), each with an ID and MITRE techniques. Shell names, stratum ports, backdoor ports, the FIM watch list, GTFOBins SUID names, package managers and privileged groups move into the bundle's `catalog`. Events from a rule carry `rule.id`, `rule.title` and its techniques
 - Operator rule bundles in rules.d: `rules.dir` (default `/etc/pisentry/rules.d`, env `PISENTRY_RULES_DIR`) loads operator bundles over the built-in rules. A rule with a built-in ID replaces it, which is how exceptions are added to a built-in rule. A broken bundle is logged at startup and the agent runs on the built-in rules
 - Rule validation with pisentry check: `pisentry check [-rules PATH]` validates bundles and exits 1 naming the file, rule and field
@@ -34,6 +34,7 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ### Changed
 
+- The project moved to the `pisentry` GitHub organization and its own domain. The repository is now `github.com/pisentry/pisentry` (old URLs redirect), the Go module path is `github.com/pisentry/pisentry`, images publish to `ghcr.io/pisentry/pisentry` from the next release, and the website is https://pisentry.dev/. The v0.1.0 image stays at `ghcr.io/mrguato/pisentry`, which the Kubernetes base still pins by digest until the next release
 - `pisentry_events_total{category="PS00",severity="high"}` is pre-created at 0 like the Top 10 series, so `increase()` sees the first operational event. The dashboard's attack panels exclude PS00
 - `proc.miner_names` now adds names on top of the `PS06-MINER-KNOWN-NAME` rule instead of replacing the built-in list, and its default is empty. `proc.stratum_ports` and `proc.shell_names` still replace the built-in lists when set
 - The SUID walk and the posture audit resume their 6 hour schedule after a restart instead of running again on every start. The last run time is saved with the baselines, so `pisentry baseline reset` still forces a fresh scan. On a Pi that kept restarting, the repeated walk filled the page and inode cache, and the agent's own reads stalled other workloads on the same SD card
@@ -63,5 +64,5 @@ First release.
 - Flux-ready Kubernetes manifests: DaemonSet, NetworkPolicy, PodMonitor, Grafana dashboard
 - Safe, self-cleaning attack simulation script
 
-[Unreleased]: https://github.com/MrGuato/pisentry/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/MrGuato/pisentry/releases/tag/v0.1.0
+[Unreleased]: https://github.com/pisentry/pisentry/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/pisentry/pisentry/releases/tag/v0.1.0

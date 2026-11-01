@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 func TestCorruptStateRecovers(t *testing.T) {

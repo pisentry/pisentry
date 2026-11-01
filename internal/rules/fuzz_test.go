@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 // FuzzLoadBytes feeds arbitrary bytes to the strict loader. The agent runs as

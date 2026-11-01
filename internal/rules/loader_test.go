@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 // minimalRule is a valid rule used as the base for table-driven mutations.

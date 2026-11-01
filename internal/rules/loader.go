@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/MrGuato/pisentry/internal/config"
+	"github.com/pisentry/pisentry/internal/config"
 )
 
 //go:embed default.json

@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/rules"
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/rules"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 // newSUIDSeverity rates a setuid/setgid file that was not in the baseline.

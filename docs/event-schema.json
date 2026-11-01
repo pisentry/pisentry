@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mrguato.github.io/pisentry/event-schema.json",
+  "$id": "https://pisentry.dev/event-schema.json",
   "title": "pisentry Event Schema v1",
   "description": "JSON Schema for security events emitted by pisentry (schema_version 1).",
   "type": "object",

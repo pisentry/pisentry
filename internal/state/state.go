@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/audit"
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/audit"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 const (

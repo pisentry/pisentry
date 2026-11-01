@@ -6,22 +6,15 @@
   </picture>
 </p>
 
-[![Made With Love](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F-by%20Jonathan-red)](https://github.com/MrGuato)
-[![Website](https://img.shields.io/badge/Website-mrguato.github.io%2Fpisentry-0E9F6E?style=flat-square)](https://mrguato.github.io/pisentry/)
-[![ci](https://github.com/MrGuato/pisentry/actions/workflows/ci.yml/badge.svg)](https://github.com/MrGuato/pisentry/actions/workflows/ci.yml)
-[![codeql](https://github.com/MrGuato/pisentry/actions/workflows/codeql.yml/badge.svg)](https://github.com/MrGuato/pisentry/actions/workflows/codeql.yml)
-[![release](https://github.com/MrGuato/pisentry/actions/workflows/release.yml/badge.svg)](https://github.com/MrGuato/pisentry/actions/workflows/release.yml)
-![GitHub release](https://img.shields.io/github/v/release/MrGuato/pisentry?style=flat-square)
-![Go version](https://img.shields.io/github/go-mod/go-version/MrGuato/pisentry?style=flat-square&logo=go)
-![License](https://img.shields.io/github/license/MrGuato/pisentry?style=flat-square)
-![Platforms](https://img.shields.io/badge/Platforms-arm64%20%7C%20armv7%20%7C%20amd64-success?style=flat-square&logo=raspberrypi)
-![Dependencies](https://img.shields.io/badge/Dependencies-none%2C%20stdlib%20only-blue?style=flat-square)
-[![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fmrguato%2Fpisentry-blue?style=flat-square&logo=docker)](https://github.com/MrGuato/pisentry/pkgs/container/pisentry)
-![Supply chain](https://img.shields.io/badge/Supply%20chain-provenance%20%2B%20SBOM-informational?style=flat-square)
-[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/MrGuato/pisentry?label=OpenSSF%20Scorecard&style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/MrGuato/pisentry)
-![GitHub last commit](https://img.shields.io/github/last-commit/MrGuato/pisentry?style=flat-square)
-![GitHub repo size](https://img.shields.io/github/repo-size/MrGuato/pisentry?style=flat-square)
-![Visitors](https://visitor-badge.laobi.icu/badge?page_id=mrguato.pisentry)
+[![Made With Love](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F-by%20Jonathan-red?style=flat-square)](https://github.com/MrGuato)
+[![ci](https://github.com/pisentry/pisentry/actions/workflows/ci.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/ci.yml)
+[![codeql](https://github.com/pisentry/pisentry/actions/workflows/codeql.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/codeql.yml)
+[![GitHub release](https://img.shields.io/github/v/release/pisentry/pisentry?style=flat-square)](https://github.com/pisentry/pisentry/releases/latest)
+![Go version](https://img.shields.io/github/go-mod/go-version/pisentry/pisentry?style=flat-square&logo=go)
+![License](https://img.shields.io/github/license/pisentry/pisentry?style=flat-square)
+[![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fpisentry%2Fpisentry-blue?style=flat-square&logo=docker)](https://github.com/pisentry/pisentry/pkgs/container/pisentry)
+[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/pisentry/pisentry?label=OpenSSF%20Scorecard&style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/pisentry/pisentry)
+![GitHub last commit](https://img.shields.io/github/last-commit/pisentry/pisentry?style=flat-square)
 
 **A single static binary that watches a small Linux host for the ten attacks that hit it most, ranks them, and tells you where to look first.**
 
@@ -72,7 +65,7 @@ I run a k3s cluster on Raspberry Pis and one x86 box, all declared in Git. Falco
 
 pisentry is the host-side agent I wanted: one binary, one JSON config, a Top 10 that tells you what matters this week, and output you can graph and alert on. It runs next to Falco, not instead of it.
 
-Falco sees a syscall the moment it happens; pisentry covers the host underneath it. The [comparison](https://mrguato.github.io/pisentry/#compare) has the details.
+Falco sees a syscall the moment it happens; pisentry covers the host underneath it. The [comparison](https://pisentry.dev/#compare) has the details.
 
 ---
 
@@ -81,8 +74,8 @@ Falco sees a syscall the moment it happens; pisentry covers the host underneath 
 Audit a Pi in four commands. No install, no daemon, exit code 2 if anything is High or Critical.
 
 ```bash
-curl -fsSLO https://github.com/MrGuato/pisentry/releases/latest/download/pisentry-linux-arm64
-curl -fsSLO https://github.com/MrGuato/pisentry/releases/latest/download/SHA256SUMS
+curl -fsSLO https://github.com/pisentry/pisentry/releases/latest/download/pisentry-linux-arm64
+curl -fsSLO https://github.com/pisentry/pisentry/releases/latest/download/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
 chmod +x pisentry-linux-arm64 && sudo ./pisentry-linux-arm64 audit
 ```
@@ -119,7 +112,7 @@ How the detectors feed the engine, and the learning period, cooldown and sanitiz
 **Bare metal (systemd):**
 
 ```bash
-git clone https://github.com/MrGuato/pisentry && cd pisentry
+git clone https://github.com/pisentry/pisentry && cd pisentry
 sudo ./deploy/install.sh
 ```
 
@@ -225,7 +218,7 @@ The detection logic is public on purpose. Thresholds are per-deployment configur
 
 ## Roadmap
 
-Real-time process events and fileless detection, persistent windows and attack-chain correlation, k3s checks, and opt-in active response. The live roadmap, built from the GitHub milestones, is at [mrguato.github.io/pisentry/roadmap.html](https://mrguato.github.io/pisentry/roadmap.html).
+Real-time process events and fileless detection, persistent windows and attack-chain correlation, k3s checks, and opt-in active response. The live roadmap, built from the GitHub milestones, is at [pisentry.dev/roadmap.html](https://pisentry.dev/roadmap.html).
 
 ---
 

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/engine"
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/procfs"
-	"github.com/MrGuato/pisentry/internal/rules"
+	"github.com/pisentry/pisentry/internal/engine"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/procfs"
+	"github.com/pisentry/pisentry/internal/rules"
 )
 
 // clkTck is USER_HZ, 100 on every Linux arm, arm64 and amd64 build.

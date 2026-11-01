@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 func baseRule() Rule {
