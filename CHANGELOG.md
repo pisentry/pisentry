@@ -4,6 +4,8 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-01
+
 ### Added
 
 - Your own detection rules: Rule Schema v1 and a strict JSON rule loader (`internal/rules`, `docs/rule-schema.md`). Rules use Sigma-aligned field names, match on Event Schema v1 fields with literal operators kept apart from RE2 regex, and take per-rule exceptions by exe, parent comm, uid, user, container image, CIDR, path and command line. Unknown fields, duplicate IDs, bad regexes, unknown categories and oversize input are rejected, never truncated
@@ -34,7 +36,7 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ### Changed
 
-- The project moved to the `pisentry` GitHub organization and its own domain. The repository is now `github.com/pisentry/pisentry` (old URLs redirect), the Go module path is `github.com/pisentry/pisentry`, images publish to `ghcr.io/pisentry/pisentry` from the next release, and the website is https://pisentry.dev/. The v0.1.0 image stays at `ghcr.io/mrguato/pisentry`, which the Kubernetes base still pins by digest until the next release
+- The project moved to the `pisentry` GitHub organization and its own domain. The repository is now `github.com/pisentry/pisentry` (old URLs redirect), the Go module path is `github.com/pisentry/pisentry`, images publish to `ghcr.io/pisentry/pisentry` starting with this release, and the website is https://pisentry.dev/. The v0.1.0 image stays at `ghcr.io/mrguato/pisentry`
 - `pisentry_events_total{category="PS00",severity="high"}` is pre-created at 0 like the Top 10 series, so `increase()` sees the first operational event. The dashboard's attack panels exclude PS00
 - `proc.miner_names` now adds names on top of the `PS06-MINER-KNOWN-NAME` rule instead of replacing the built-in list, and its default is empty. `proc.stratum_ports` and `proc.shell_names` still replace the built-in lists when set
 - The SUID walk and the posture audit resume their 6 hour schedule after a restart instead of running again on every start. The last run time is saved with the baselines, so `pisentry baseline reset` still forces a fresh scan. On a Pi that kept restarting, the repeated walk filled the page and inode cache, and the agent's own reads stalled other workloads on the same SD card
@@ -64,5 +66,6 @@ First release.
 - Flux-ready Kubernetes manifests: DaemonSet, NetworkPolicy, PodMonitor, Grafana dashboard
 - Safe, self-cleaning attack simulation script
 
-[Unreleased]: https://github.com/pisentry/pisentry/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pisentry/pisentry/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/pisentry/pisentry/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pisentry/pisentry/releases/tag/v0.1.0
