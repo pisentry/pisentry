@@ -9,9 +9,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/audit"
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/audit"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 type Row struct {

@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/config"
-	"github.com/MrGuato/pisentry/internal/engine"
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/logsrc"
+	"github.com/pisentry/pisentry/internal/config"
+	"github.com/pisentry/pisentry/internal/engine"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/logsrc"
 )
 
 // authSeeds are the auth lines the attack simulation writes plus the other

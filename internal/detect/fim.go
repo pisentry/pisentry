@@ -16,12 +16,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/MrGuato/pisentry/internal/config"
-	"github.com/MrGuato/pisentry/internal/engine"
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/procfs"
-	"github.com/MrGuato/pisentry/internal/rules"
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/config"
+	"github.com/pisentry/pisentry/internal/engine"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/procfs"
+	"github.com/pisentry/pisentry/internal/rules"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 // DefaultWatches returns the FIM watch list from the default rule bundle.

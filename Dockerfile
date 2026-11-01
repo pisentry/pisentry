@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM=${TARGETVARIANT#v} \
 # the host and runs the host's own journalctl (logs.journal_chroot=true), so the
 # reader always matches the host's journal format.
 FROM gcr.io/distroless/static-debian12:latest@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2
-LABEL org.opencontainers.image.source="https://github.com/MrGuato/pisentry" \
+LABEL org.opencontainers.image.source="https://github.com/pisentry/pisentry" \
       org.opencontainers.image.description="Top 10 attack reporting agent for Raspberry Pi and ARM Linux" \
       org.opencontainers.image.licenses="MIT"
 COPY --from=build /out/pisentry /usr/local/bin/pisentry

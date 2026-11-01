@@ -1,6 +1,6 @@
 [Unit]
 Description=pisentry host security agent (Top 10 attack reporting)
-Documentation=https://github.com/MrGuato/pisentry
+Documentation=https://github.com/pisentry/pisentry
 After=network-online.target systemd-journald.service
 Wants=network-online.target
 

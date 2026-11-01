@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 func TestResumeDelay(t *testing.T) {

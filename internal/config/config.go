@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 // Duration is a time.Duration that marshals as "5m", "30s", etc.

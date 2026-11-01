@@ -1,3 +1,3 @@
-module github.com/MrGuato/pisentry
+module github.com/pisentry/pisentry
 
 go 1.27

@@ -1,6 +1,6 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
-IMAGE   ?= ghcr.io/mrguato/pisentry
+IMAGE   ?= ghcr.io/pisentry/pisentry
 
 .PHONY: all test vet build dist image sim demo fuzz clean
 

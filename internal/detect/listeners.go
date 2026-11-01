@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/procfs"
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/procfs"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 func (l *Listeners) backdoorNote(port int) (string, bool) {

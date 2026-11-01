@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/MrGuato/pisentry/internal/config"
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/config"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 func put(t *testing.T, root, p, s string, mode os.FileMode) {

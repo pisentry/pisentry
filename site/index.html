@@ -4,10 +4,10 @@
 <!-- include:head -->
 <title>pisentry: host security for Raspberry Pi</title>
 <meta name="description" content="pisentry is a host security agent for Raspberry Pi and ARM Linux. One static binary watches SSH, processes, files and listeners, ranks the ten attacks that matter, and needs no eBPF.">
-<link rel="canonical" href="https://mrguato.github.io/pisentry/">
+<link rel="canonical" href="https://pisentry.dev/">
 <meta property="og:title" content="pisentry: host security for Raspberry Pi">
 <meta property="og:description" content="One static binary. Ten attacks, ranked. No eBPF, no third-party code.">
-<meta property="og:url" content="https://mrguato.github.io/pisentry/">
+<meta property="og:url" content="https://pisentry.dev/">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -24,7 +24,7 @@
       <p class="lead">pisentry watches SSH, processes, files and listeners on Raspberry Pi and ARM Linux. It ranks the ten attacks that matter and tells you where to look first.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#install">Audit your Pi</a>
-        <a class="btn" href="https://github.com/MrGuato/pisentry/releases/latest">Download <span class="count" data-build="release_tag">v0.1.0</span></a>
+        <a class="btn" href="https://github.com/pisentry/pisentry/releases/latest">Download <span class="count" data-build="release_tag">v0.1.0</span></a>
       </div>
       <ul class="hero-meta">
         <li>One static binary</li>
@@ -410,8 +410,8 @@ PISENTRY_WEBHOOK_URL=https://ntfy.sh/a-long-random-topic-name
         <button type="button" role="tab" id="tab-verify" aria-controls="panel-verify" aria-selected="false">Verify</button>
       </div>
       <div class="tabpanel" role="tabpanel" id="panel-audit" aria-labelledby="tab-audit">
-        <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>curl -fsSLO https://github.com/MrGuato/pisentry/releases/latest/download/pisentry-linux-arm64
-curl -fsSLO https://github.com/MrGuato/pisentry/releases/latest/download/SHA256SUMS
+        <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>curl -fsSLO https://github.com/pisentry/pisentry/releases/latest/download/pisentry-linux-arm64
+curl -fsSLO https://github.com/pisentry/pisentry/releases/latest/download/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
 chmod +x pisentry-linux-arm64 &amp;&amp; sudo ./pisentry-linux-arm64 audit</pre></div>
         <p>Use <code>pisentry-linux-armv7</code> on 32-bit Pi OS and <code>pisentry-linux-amd64</code> on x86.</p>
@@ -421,7 +421,7 @@ How to fix:
   SSH-02: Set 'PermitRootLogin no' (or prohibit-password if you need key-based root).</pre></div>
       </div>
       <div class="tabpanel" role="tabpanel" id="panel-systemd" aria-labelledby="tab-systemd">
-        <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>git clone https://github.com/MrGuato/pisentry &amp;&amp; cd pisentry
+        <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>git clone https://github.com/pisentry/pisentry &amp;&amp; cd pisentry
 sudo ./deploy/install.sh</pre></div>
         <p>The binary goes to /usr/local/bin, config to /etc/pisentry and secrets to a 0600 env file. The unit keeps two capabilities, a syscall filter, a read-only system and a 256 MiB memory cap.</p>
       </div>
@@ -435,7 +435,7 @@ kubectl -n pisentry logs -l app.kubernetes.io/name=pisentry -f | jq 'select(.sev
         <p>Releases after v0.1.0 are signed by the release workflow with Sigstore cosign. You need cosign 3 or later.</p>
         <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>cosign verify-blob \
   --bundle SHA256SUMS.sigstore.json \
-  --certificate-identity-regexp '^https://github.com/MrGuato/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github.com/pisentry/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   SHA256SUMS</pre></div>
         <p><a href="security.html#verify">More ways to verify</a></p>
@@ -457,7 +457,7 @@ kubectl -n pisentry logs -l app.kubernetes.io/name=pisentry -f | jq 'select(.sev
       <div class="trust-item"><h3>Provenance and SBOM</h3><p>Every image ships SLSA provenance and an SBOM you can inspect with buildx.</p></div>
       <div class="trust-item"><h3>Pinned, all of it</h3><p>Actions by commit SHA, base images by digest. Dependabot proposes, a human merges.</p></div>
       <div class="trust-item"><h3>Scanned on every push</h3><p>govulncheck, CodeQL, staticcheck and go vet. Tests run on x86 with the race detector and on native arm64, and every parser that reads attacker input is fuzzed.</p></div>
-      <div class="trust-item"><h3>Scorecard <span data-build="scorecard">6.4</span></h3><p><a href="https://scorecard.dev/viewer/?uri=github.com/MrGuato/pisentry">OpenSSF Scorecard</a> grades the repo's practices in public.</p></div>
+      <div class="trust-item"><h3>Scorecard <span data-build="scorecard">6.4</span></h3><p><a href="https://scorecard.dev/viewer/?uri=github.com/pisentry/pisentry">OpenSSF Scorecard</a> grades the repo's practices in public.</p></div>
     </div>
     <p class="note"><a href="security.html">Read the security page</a> for the threat model, pod grants and how to report a bug in private.</p>
   </div>
@@ -471,7 +471,7 @@ kubectl -n pisentry logs -l app.kubernetes.io/name=pisentry -f | jq 'select(.sev
       <p class="lead">Real-time process events, fileless detection, attack chains, k3s checks and opt-in response. Live from GitHub milestones.</p>
     </div>
     <!-- build:roadmap-teaser -->
-    <div class="empty">The roadmap is built from GitHub milestones. <a href="https://github.com/MrGuato/pisentry/milestones">See the milestones</a>.</div>
+    <div class="empty">The roadmap is built from GitHub milestones. <a href="https://github.com/pisentry/pisentry/milestones">See the milestones</a>.</div>
     <!-- /build:roadmap-teaser -->
     <p class="note"><a href="roadmap.html">Open the full roadmap</a></p>
   </div>
@@ -501,12 +501,12 @@ kubectl -n pisentry logs -l app.kubernetes.io/name=pisentry -f | jq 'select(.sev
       <h2>Check your Pi in one minute.</h2>
       <p>Download, verify, run. If the audit finds nothing, you sleep better. If it does, it tells you how to fix it.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/MrGuato/pisentry/releases/latest">Get <span data-build="release_tag">v0.1.0</span></a>
-        <a class="btn" href="https://github.com/MrGuato/pisentry#readme">Read the docs</a>
+        <a class="btn btn-primary" href="https://github.com/pisentry/pisentry/releases/latest">Get <span data-build="release_tag">v0.1.0</span></a>
+        <a class="btn" href="https://github.com/pisentry/pisentry#readme">Read the docs</a>
       </div>
     </div>
-    <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>curl -fsSLO https://github.com/MrGuato/pisentry/releases/latest/download/pisentry-linux-arm64
-curl -fsSLO https://github.com/MrGuato/pisentry/releases/latest/download/SHA256SUMS
+    <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>curl -fsSLO https://github.com/pisentry/pisentry/releases/latest/download/pisentry-linux-arm64
+curl -fsSLO https://github.com/pisentry/pisentry/releases/latest/download/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
 chmod +x pisentry-linux-arm64 &amp;&amp; sudo ./pisentry-linux-arm64 audit</pre></div>
   </div>

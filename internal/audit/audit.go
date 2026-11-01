@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MrGuato/pisentry/internal/config"
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/procfs"
+	"github.com/pisentry/pisentry/internal/config"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/procfs"
 )
 
 const (

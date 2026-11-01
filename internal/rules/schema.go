@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MrGuato/pisentry/internal/config"
-	"github.com/MrGuato/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/config"
+	"github.com/pisentry/pisentry/internal/event"
 )
 
 // Hard limits enforced at load time. Inputs exceeding any limit are rejected,

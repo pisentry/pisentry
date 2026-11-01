@@ -429,7 +429,7 @@ def fill(page, name, partials, vals, blocks):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default="_site")
-    ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "MrGuato/pisentry"))
+    ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "pisentry/pisentry"))
     ap.add_argument("--offline", action="store_true", help="no network; keep fallback text")
     ap.add_argument("--strict", action="store_true", help="fail on GitHub API errors (CI)")
     args = ap.parse_args()

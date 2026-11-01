@@ -4,7 +4,7 @@ pisentry runs as root under systemd, or with `hostPID` and three capabilities as
 
 ## Reporting a vulnerability
 
-Use GitHub's private vulnerability reporting: [github.com/MrGuato/pisentry/security/advisories/new](https://github.com/MrGuato/pisentry/security/advisories/new).
+Use GitHub's private vulnerability reporting: [github.com/pisentry/pisentry/security/advisories/new](https://github.com/pisentry/pisentry/security/advisories/new).
 
 Do not open a public issue, pull request or discussion for a suspected vulnerability.
 
@@ -57,7 +57,7 @@ Every input is attacker-controlled: log lines, file names and contents, process 
 - Releases are built by GitHub Actions from version tags pushed by the maintainer, never from a laptop
 - Binaries ship with `SHA256SUMS`. Verify with `sha256sum --check --ignore-missing SHA256SUMS`
 - The image and `SHA256SUMS` are signed with cosign in keyless mode. The signing identity is the release workflow in this repository, attested by GitHub's OIDC issuer, and every signature is recorded in the Sigstore transparency log. There is no long-lived signing key to steal. `v0.1.0` predates signing; verify it by digest and provenance
-- Images ship with SLSA provenance and an SBOM. Inspect with `docker buildx imagetools inspect ghcr.io/mrguato/pisentry:<tag> --format '{{json .Provenance}}'`
+- Images ship with SLSA provenance and an SBOM. Inspect with `docker buildx imagetools inspect ghcr.io/pisentry/pisentry:<tag> --format '{{json .Provenance}}'`
 - Every GitHub Action is pinned to a commit SHA and every base image to a digest. Dependabot proposes the updates; a human merges them
 - CI runs `govulncheck` against the Go standard library on every push, so a toolchain vulnerability fails the build instead of shipping
 - Pin the image by digest in your cluster, not by tag
@@ -70,9 +70,9 @@ Image:
 
 ```sh
 cosign verify \
-  --certificate-identity-regexp '^https://github.com/MrGuato/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github.com/pisentry/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ghcr.io/mrguato/pisentry:<tag>
+  ghcr.io/pisentry/pisentry:<tag>
 ```
 
 Binaries. From the release page, download `SHA256SUMS`, `SHA256SUMS.sigstore.json` and the binary for your board:
@@ -80,7 +80,7 @@ Binaries. From the release page, download `SHA256SUMS`, `SHA256SUMS.sigstore.jso
 ```sh
 cosign verify-blob \
   --bundle SHA256SUMS.sigstore.json \
-  --certificate-identity-regexp '^https://github.com/MrGuato/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github.com/pisentry/pisentry/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS

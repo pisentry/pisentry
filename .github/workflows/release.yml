@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE: ghcr.io/mrguato/pisentry
+  IMAGE: ghcr.io/pisentry/pisentry
 
 jobs:
   binaries:

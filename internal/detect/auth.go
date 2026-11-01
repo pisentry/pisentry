@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MrGuato/pisentry/internal/engine"
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/logsrc"
-	"github.com/MrGuato/pisentry/internal/rules"
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/engine"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/logsrc"
+	"github.com/pisentry/pisentry/internal/rules"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 // Auth covers PS01 (SSH brute force), PS02 (suspicious login) and the

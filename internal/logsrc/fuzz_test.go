@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/MrGuato/pisentry/internal/metrics"
+	"github.com/pisentry/pisentry/internal/metrics"
 )
 
 // Seeds are the lines the attack simulation writes (scripts/sim-container/sim.sh)

@@ -8,7 +8,7 @@
 #   sudo ./deploy/install.sh --binary ./dist/pisentry-linux-arm64   # local build
 set -euo pipefail
 
-REPO="MrGuato/pisentry"
+REPO="pisentry/pisentry"
 VERSION="latest"
 BINARY=""
 HERE="$(cd "$(dirname "$0")" && pwd)"

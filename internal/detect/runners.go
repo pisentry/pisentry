@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/MrGuato/pisentry/internal/audit"
-	"github.com/MrGuato/pisentry/internal/event"
-	"github.com/MrGuato/pisentry/internal/logsrc"
-	"github.com/MrGuato/pisentry/internal/state"
+	"github.com/pisentry/pisentry/internal/audit"
+	"github.com/pisentry/pisentry/internal/event"
+	"github.com/pisentry/pisentry/internal/logsrc"
+	"github.com/pisentry/pisentry/internal/state"
 )
 
 // RunLogs feeds every log line to the auth and port-scan detectors.
