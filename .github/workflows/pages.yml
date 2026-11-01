@@ -10,7 +10,7 @@ on:
     paths:
       - "site/**"
       - "scripts/build-site.py"
-      - "docs/assets/**"
+      - "docs/**"
       - "CHANGELOG.md"
       - "go.mod"
       - ".github/workflows/pages.yml"
@@ -18,7 +18,7 @@ on:
     paths:
       - "site/**"
       - "scripts/build-site.py"
-      - "docs/assets/**"
+      - "docs/**"
       - "CHANGELOG.md"
       - "go.mod"
       - ".github/workflows/pages.yml"
