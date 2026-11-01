@@ -6,22 +6,15 @@
   </picture>
 </p>
 
-[![Made With Love](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F-by%20Jonathan-red)](https://github.com/MrGuato)
-[![Website](https://img.shields.io/badge/Website-pisentry.dev-0E9F6E?style=flat-square)](https://pisentry.dev/)
+[![Made With Love](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F-by%20Jonathan-red?style=flat-square)](https://github.com/MrGuato)
 [![ci](https://github.com/pisentry/pisentry/actions/workflows/ci.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/ci.yml)
 [![codeql](https://github.com/pisentry/pisentry/actions/workflows/codeql.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/codeql.yml)
-[![release](https://github.com/pisentry/pisentry/actions/workflows/release.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/release.yml)
-![GitHub release](https://img.shields.io/github/v/release/pisentry/pisentry?style=flat-square)
+[![GitHub release](https://img.shields.io/github/v/release/pisentry/pisentry?style=flat-square)](https://github.com/pisentry/pisentry/releases/latest)
 ![Go version](https://img.shields.io/github/go-mod/go-version/pisentry/pisentry?style=flat-square&logo=go)
 ![License](https://img.shields.io/github/license/pisentry/pisentry?style=flat-square)
-![Platforms](https://img.shields.io/badge/Platforms-arm64%20%7C%20armv7%20%7C%20amd64-success?style=flat-square&logo=raspberrypi)
-![Dependencies](https://img.shields.io/badge/Dependencies-none%2C%20stdlib%20only-blue?style=flat-square)
 [![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fpisentry%2Fpisentry-blue?style=flat-square&logo=docker)](https://github.com/pisentry/pisentry/pkgs/container/pisentry)
-![Supply chain](https://img.shields.io/badge/Supply%20chain-provenance%20%2B%20SBOM-informational?style=flat-square)
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/pisentry/pisentry?label=OpenSSF%20Scorecard&style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/pisentry/pisentry)
 ![GitHub last commit](https://img.shields.io/github/last-commit/pisentry/pisentry?style=flat-square)
-![GitHub repo size](https://img.shields.io/github/repo-size/pisentry/pisentry?style=flat-square)
-![Visitors](https://visitor-badge.laobi.icu/badge?page_id=mrguato.pisentry)
 
 **A single static binary that watches a small Linux host for the ten attacks that hit it most, ranks them, and tells you where to look first.**
 
