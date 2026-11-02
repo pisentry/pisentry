@@ -229,6 +229,219 @@ def short_bullet(s):
     return s[:1].upper() + s[1:]
 
 
+# ---------------------------------------------------------------- docs
+
+# docs/*.md rendered as site pages, in nav order. Only the Markdown these files
+# use is supported: headings, paragraphs, flat lists, fenced code, pipe tables,
+# and inline code, links and bold. The files live in the repo, but everything is
+# escaped anyway.
+DOCS = ROOT / "docs"
+DOC_PAGES = ["install", "reference", "rule-schema", "event-schema"]
+DOC_FILES = ["event-schema.json"]  # served at the root, where its $id points
+
+
+def slug(text):
+    """GitHub's heading anchor: lowercase, punctuation dropped, spaces to dashes."""
+    text = re.sub(r"[`*]", "", text).strip().lower()
+    return re.sub(r"[^\w\- ]", "", text).replace(" ", "-")
+
+
+def doc_link(href, repo):
+    if re.match(r"^(https?:|mailto:|#)", href):
+        return href
+    path, sep, frag = href.partition("#")
+    frag = sep + frag
+    name = Path(path).stem
+    if path.endswith(".md") and "/" not in path and name in DOC_PAGES:
+        return f"{name}.html{frag}"
+    if path in DOC_FILES:
+        return path + frag
+    target = path[3:] if path.startswith("../") else f"docs/{path}"
+    return f"https://github.com/{repo}/blob/main/{target}{frag}"
+
+
+def md_inline(s, repo):
+    stash = []
+
+    def keep(h):
+        stash.append(h)
+        return f"\x00{len(stash) - 1}\x00"
+
+    s = re.sub(r"`([^`]+)`", lambda m: keep(f"<code>{esc(m.group(1))}</code>"), s)
+
+    def text(t):
+        return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", esc(t))
+
+    s = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)",
+               lambda m: keep(f'<a href="{esc(doc_link(m.group(2), repo))}">{text(m.group(1))}</a>'), s)
+    s = text(s)
+    while "\x00" in s:
+        s = re.sub(r"\x00(\d+)\x00", lambda m: stash[int(m.group(1))], s)
+    return s
+
+
+def table_cells(line):
+    """Split a pipe-table row. A | inside `code` or escaped as \\| is not a separator."""
+    cells, cur, in_code, i = [], "", False, 0
+    line = line.strip()
+    if line.startswith("|"):
+        line = line[1:]
+    if line.endswith("|") and not line.endswith("\\|"):
+        line = line[:-1]
+    while i < len(line):
+        c = line[i]
+        if c == "\\" and line[i + 1:i + 2] == "|":
+            cur += "|"
+            i += 2
+            continue
+        if c == "`":
+            in_code = not in_code
+        if c == "|" and not in_code:
+            cells.append(cur.strip())
+            cur = ""
+        else:
+            cur += c
+        i += 1
+    cells.append(cur.strip())
+    return cells
+
+
+def md_blocks(text, repo):
+    """Markdown to (title, lead, body HTML, [(id, h2 text)])."""
+    lines = text.replace("\r\n", "\n").split("\n")
+    title, lead, out, toc = "", "", [], []
+    para, i = [], 0
+
+    def flush():
+        nonlocal lead
+        if para:
+            html_ = md_inline(" ".join(para), repo)
+            if title and not lead and not out:
+                lead = html_
+            else:
+                out.append(f"<p>{html_}</p>")
+            para.clear()
+
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("```"):
+            flush()
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith("```"):
+                j += 1
+            code = "\n".join(lines[i + 1:j])
+            out.append(f'<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>{esc(code)}</pre></div>')
+            i = j + 1
+            continue
+        m = re.match(r"^(#{1,4}) (.*)$", line)
+        if m:
+            flush()
+            level, raw = len(m.group(1)), m.group(2).strip()
+            if level == 1 and not title:
+                title = re.sub(r"[`*]", "", raw)
+            else:
+                hid = slug(raw)
+                out.append(f'<h{level} id="{esc(hid)}">{md_inline(raw, repo)}</h{level}>')
+                if level == 2:
+                    toc.append((hid, re.sub(r"[`*]", "", raw)))
+            i += 1
+            continue
+        if line.startswith("|"):
+            flush()
+            rows = []
+            while i < len(lines) and lines[i].startswith("|"):
+                rows.append(table_cells(lines[i]))
+                i += 1
+            head, body = rows[0], [r for r in rows[1:] if not all(re.fullmatch(r":?-+:?", c) for c in r)]
+            ths = "".join(f'<th scope="col">{md_inline(c, repo)}</th>' for c in head)
+            trs = "".join("<tr>" + "".join(f"<td>{md_inline(c, repo)}</td>" for c in r) + "</tr>" for r in body)
+            out.append(f'<div class="table-wrap"><table><thead><tr>{ths}</tr></thead><tbody>{trs}</tbody></table></div>')
+            continue
+        lm = re.match(r"^(-|\d+\.) (.*)$", line)
+        if lm:
+            flush()
+            tag = "ul" if lm.group(1) == "-" else "ol"
+            items = []
+            while i < len(lines):
+                im = re.match(r"^(-|\d+\.) (.*)$", lines[i])
+                if im:
+                    items.append(im.group(2))
+                elif lines[i].startswith("  ") and lines[i].strip() and items:
+                    items[-1] += " " + lines[i].strip()
+                else:
+                    break
+                i += 1
+            # A list of in-page links is a table of contents; the page has its own.
+            if not all(re.fullmatch(r"\[[^\]]+\]\(#[^)]+\)", it.strip()) for it in items):
+                out.append(f"<{tag}>" + "".join(f"<li>{md_inline(it, repo)}</li>" for it in items) + f"</{tag}>")
+            continue
+        if not line.strip():
+            flush()
+        else:
+            para.append(line.strip())
+        i += 1
+    flush()
+    return title, lead, "\n".join(out), toc
+
+
+def render_docs(out, repo):
+    pages = {}
+    for name in DOC_PAGES:
+        pages[name] = md_blocks((DOCS / f"{name}.md").read_text(encoding="utf-8"), repo)
+    for f in DOC_FILES:
+        shutil.copy2(DOCS / f, out / f)
+    for name, (title, lead, body, toc) in pages.items():
+        nav = []
+        for other in DOC_PAGES:
+            cur = ' aria-current="page"' if other == name else ""
+            nav.append(f'<a href="{other}.html"{cur}>{esc(pages[other][0])}</a>')
+            if other == name:
+                nav += [f'<a class="sub" href="#{esc(hid)}">{esc(h)}</a>' for hid, h in toc]
+        desc = cut(html.unescape(re.sub(r"<[^>]+>", "", lead)), 155)
+        url = f"https://pisentry.dev/{name}.html"
+        page = f"""<!doctype html>
+<html lang="en">
+<head>
+<!-- include:head -->
+<title>{esc(title)}: pisentry docs</title>
+<meta name="description" content="{esc(desc)}">
+<link rel="canonical" href="{url}">
+<meta property="og:title" content="{esc(title)}">
+<meta property="og:description" content="{esc(desc)}">
+<meta property="og:url" content="{url}">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<!-- include:header -->
+
+<main id="main">
+  <section class="page-head">
+    <div class="wrap">
+      <p class="eyebrow"><span class="sq"></span>Docs</p>
+      <h1>{esc(title)}</h1>
+      <p class="lead">{lead}</p>
+    </div>
+  </section>
+
+  <div class="wrap with-toc">
+    <nav class="toc" aria-label="Documentation">
+      {chr(10).join(nav)}
+    </nav>
+
+    <div class="prose">
+{body}
+      <p class="muted doc-source">Source: <a href="https://github.com/{esc(repo)}/blob/main/docs/{name}.md">docs/{name}.md</a></p>
+    </div>
+  </div>
+</main>
+
+<!-- include:footer -->
+</body>
+</html>
+"""
+        (out / f"{name}.html").write_text(page, encoding="utf-8")
+
+
 # ---------------------------------------------------------------- rendering
 
 PRIO_RE = re.compile(r"priority:(P\d)")
@@ -443,6 +656,7 @@ def main():
     (out / "assets" / "brand").mkdir(parents=True, exist_ok=True)
     for f in BRAND_FILES:
         shutil.copy2(BRAND / f, out / "assets" / "brand" / f)
+    render_docs(out, args.repo)
 
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     data = collect(args.repo, token, args.offline, args.strict)

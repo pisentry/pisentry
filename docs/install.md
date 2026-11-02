@@ -7,7 +7,7 @@ How to run pisentry as a hardened systemd service or as a Kubernetes DaemonSet m
 ```bash
 git clone https://github.com/pisentry/pisentry && cd pisentry
 sudo ./deploy/install.sh                      # downloads the latest release for this CPU
-sudo ./deploy/install.sh --version v0.1.0     # or a specific release
+sudo ./deploy/install.sh --version v0.2.0     # or a specific release
 sudo ./deploy/install.sh --binary ./pisentry  # or a binary you built with make build
 ```
 
@@ -35,8 +35,8 @@ deploy/kubernetes/
 
 There is no separate Flux Kustomization. pi-cluster's `apps` Kustomization points at `./apps/staging` with no root `kustomization.yaml`, so Flux already picks up every subdirectory. A second Kustomization for the same path would give the objects two owners.
 
-1. Tag a release (`git tag -s v0.1.0 && git push origin v0.1.0`). The release workflow pushes `ghcr.io/pisentry/pisentry:v0.1.0` for arm64, arm/v7 and amd64 with provenance and an SBOM. New ghcr packages start private, so set it to public once, or add an imagePullSecret.
-2. Pin the image by digest in the DaemonSet (`image: ghcr.io/pisentry/pisentry:v0.1.0@sha256:...`). This agent is root-equivalent on every node. A tag can move, a digest cannot.
+1. Tag a release (`git tag -s v0.2.0 && git push origin v0.2.0`). The release workflow pushes `ghcr.io/pisentry/pisentry:v0.2.0` for arm64, arm/v7 and amd64 with provenance and an SBOM. New ghcr packages start private, so set it to public once, or add an imagePullSecret.
+2. Pin the image by digest in the DaemonSet (`image: ghcr.io/pisentry/pisentry:v0.2.0@sha256:...`). This agent is root-equivalent on every node. A tag can move, a digest cannot.
 3. Copy both paths into your cluster repo and merge to `main`. The `apps` Kustomization reconciles it. Kustomize applies atomically, so check `kubectl version` first: the DaemonSet uses `appArmorProfile` (1.30+). On an older API server that field fails the whole `apps` apply.
 4. Optional alerts: copy `secret.yaml.example` to `secret.yaml`, fill it in, encrypt it with `sops --config clusters/staging/.sops.yaml --encrypt --in-place`, then uncomment it in the overlay.
 

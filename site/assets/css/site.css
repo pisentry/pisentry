@@ -579,6 +579,12 @@ th.col-us { color: var(--accent-text); }
 .toc a { color: var(--muted); padding: 4px 10px; border-left: 2px solid var(--border); }
 .toc a:hover { color: var(--text); border-left-color: var(--accent); text-decoration: none; }
 .with-toc { display: grid; grid-template-columns: 200px 1fr; gap: 56px; padding: 56px 0 96px; }
+.toc a[aria-current="page"] { color: var(--text); font-weight: 600; border-left-color: var(--accent); }
+.toc a.sub { padding-left: 22px; font-size: 0.85rem; }
+.prose ol { padding-left: 1.4em; }
+.prose h4 { margin-top: 20px; }
+.prose .code { margin: 16px 0; }
+.prose .doc-source { margin-top: 48px; font-size: 0.85rem; }
 
 /* Footer */
 

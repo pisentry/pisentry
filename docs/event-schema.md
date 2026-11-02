@@ -62,7 +62,7 @@ All attacker-influenced string fields (`summary`, typed entity strings, and `fie
 | `process` | `exe` | `string` | Resolved `/proc/[pid]/exe` target |
 | `process` | `cmdline` | `string` | Sanitized command line (`argv`) |
 | `source` | `ip` | `string` | Source IP address (or bound/remote socket IP) |
-| `source` | `port` | `integer` | Source or target port (`0–65535`) |
+| `source` | `port` | `integer` | Source or target port (`0 to 65535`) |
 | `user` | `name` | `string` | Account username |
 | `user` | `uid` | `integer` | Account numeric UID |
 | `file` | `path` | `string` | Host file path |
@@ -110,7 +110,7 @@ For SIEM ingestion without custom guesswork, map Event Schema v1 fields directly
 | `host` | `device.hostname` | `host.hostname` / `host.name` |
 | `category` | `finding_info.analytic.uid` | `rule.category` / `event.code` |
 | `category_name` | `finding_info.analytic.name` | `event.action` |
-| `severity` | `severity` (`info`=1, `low`=2, `medium`=3, `high`=4, `critical`=5) | `event.severity_name` (`event.severity`: 1–5) |
+| `severity` | `severity` (`info`=1, `low`=2, `medium`=3, `high`=4, `critical`=5) | `event.severity_name` (`event.severity`: 1 to 5) |
 | `mitre[]` | `attacks[].technique.uid` | `threat.technique.id` |
 | `detector` | `metadata.product.feature.name` | `event.module` / `event.dataset` |
 | `summary` | `message` / `finding_info.title` | `message` |
