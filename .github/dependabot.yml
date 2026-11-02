@@ -5,6 +5,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # A release has a week to be pulled or reported before it reaches CI.
+    cooldown:
+      default-days: 7
     labels: [ci]
     # One PR per week for all actions. main requires branches to be up to date,
     # so separate PRs each go stale the moment another one merges.
@@ -12,9 +15,11 @@ updates:
       actions:
         patterns: ["*"]
 
-  # Base images in the Dockerfile are pinned by digest.
+  # Base images in the Dockerfiles are pinned by digest.
   - package-ecosystem: docker
-    directory: /
+    directories: [/, /scripts/demo]
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     labels: [ci]
