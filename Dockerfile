@@ -1,7 +1,7 @@
 # Multi-arch build: linux/arm64 (Pi 4/5), linux/arm/v7 (32-bit Pi OS), linux/amd64.
 # The Go toolchain cross-compiles natively on the build host, so no QEMU
 # emulation is needed for the compile step.
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS build
 ARG TARGETOS TARGETARCH TARGETVARIANT
 ARG VERSION=dev
 WORKDIR /src
