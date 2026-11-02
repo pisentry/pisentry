@@ -16,6 +16,7 @@
 ![License](https://img.shields.io/github/license/pisentry/pisentry?style=flat-square)
 [![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fpisentry%2Fpisentry-blue?style=flat-square&logo=docker)](https://github.com/pisentry/pisentry/pkgs/container/pisentry)
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/pisentry/pisentry?label=OpenSSF%20Scorecard&style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/pisentry/pisentry)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16178/badge)](https://www.bestpractices.dev/projects/16178)
 ![GitHub last commit](https://img.shields.io/github/last-commit/pisentry/pisentry?style=flat-square)
 
 **A single static binary that watches a small Linux host for the ten attacks that hit it most, ranks them, and tells you where to look first.**
