@@ -24,7 +24,7 @@
       <p class="lead">pisentry watches SSH, processes, files and listeners on Raspberry Pi and ARM Linux. It ranks the ten attacks that matter and tells you where to look first.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#install">Audit your Pi</a>
-        <a class="btn" href="https://github.com/pisentry/pisentry/releases/latest">Download <span class="count" data-build="release_tag">v0.1.0</span></a>
+        <a class="btn" href="https://github.com/pisentry/pisentry/releases/latest">Download <span class="count" data-build="release_tag">v0.2.0</span></a>
       </div>
       <ul class="hero-meta">
         <li>One static binary</li>
@@ -485,11 +485,11 @@ kubectl -n pisentry logs -l app.kubernetes.io/name=pisentry -f | jq 'select(.sev
     </div>
     <div class="faq">
       <details><summary>Does it replace Falco?</summary><div><p>No. Falco watches syscalls from the container runtime. pisentry watches the host: logs, files, processes and posture. Run both where you can. On a stock Pi kernel, pisentry may be the one that runs.</p></div></details>
-      <details><summary>Will it slow down my Pi?</summary><div><p>On a 2 GB Pi 4 in k3s it uses 16 MiB of memory and 2 millicores of CPU. It is capped at 256 MiB.</p><p>One known case where it did: v0.1.0 had a 96 MiB cap and re-ran its SUID walk on every start. On a control-plane Pi with a large /home, the kernel cache from that walk filled the cap, the agent restarted in a loop, and its reads competed with k3s on the SD card. The next release raises the cap and resumes slow scans after a restart instead. The fix is on main now.</p></div></details>
+      <details><summary>Will it slow down my Pi?</summary><div><p>On a 2 GB Pi 4 in k3s it uses 16 MiB of memory and 2 millicores of CPU. It is capped at 256 MiB.</p><p>One known case where it did: v0.1.0 had a 96 MiB cap and re-ran its SUID walk on every start. On a control-plane Pi with a large /home, the kernel cache from that walk filled the cap, the agent restarted in a loop, and its reads competed with k3s on the SD card. v0.2.0 raises the cap and resumes slow scans after a restart instead.</p></div></details>
       <details><summary>Why does it run as root?</summary><div><p>It reads /etc/shadow, other users' /proc entries and the journal. The systemd unit keeps two capabilities and the pod keeps three. Everything else is taken away.</p></div></details>
       <details><summary>What if an attacker gets root?</summary><div><p>Root wins. An attacker with root can stop the agent or edit its state. Ship events off the box and alert when <code>pisentry_up</code> goes missing. That is the real defense.</p></div></details>
       <details><summary>Does it block attacks?</summary><div><p>Not today. pisentry detects and alerts. Automated response is on the roadmap, off by default and fenced by allowlists.</p></div></details>
-      <details><summary>Can I write my own rules?</summary><div><p>Yes, from the next release (on main now). Drop a JSON rule bundle in /etc/pisentry/rules.d and the running agent loads it within ten seconds, or at once on systemctl reload. A broken file is rejected and the old rules stay active. In v0.1.0, thresholds, allowlists and extra watch paths are config.</p></div></details>
+      <details><summary>Can I write my own rules?</summary><div><p>Yes, since v0.2.0. Drop a JSON rule bundle in /etc/pisentry/rules.d and the running agent loads it within ten seconds, or at once on systemctl reload. A broken file is rejected and the old rules stay active.</p></div></details>
       <details><summary>What does it cost?</summary><div><p>Nothing. It is MIT licensed, and it stays that way.</p></div></details>
     </div>
   </div>
@@ -501,8 +501,8 @@ kubectl -n pisentry logs -l app.kubernetes.io/name=pisentry -f | jq 'select(.sev
       <h2>Check your Pi in one minute.</h2>
       <p>Download, verify, run. If the audit finds nothing, you sleep better. If it does, it tells you how to fix it.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/pisentry/pisentry/releases/latest">Get <span data-build="release_tag">v0.1.0</span></a>
-        <a class="btn" href="install.html">Read the docs</a>
+        <a class="btn btn-primary" href="https://github.com/pisentry/pisentry/releases/latest">Get <span data-build="release_tag">v0.2.0</span></a>
+        <a class="btn" href="https://github.com/pisentry/pisentry#readme">Read the docs</a>
       </div>
     </div>
     <div class="code"><button class="copy" type="button" data-copy>Copy</button><pre>curl -fsSLO https://github.com/pisentry/pisentry/releases/latest/download/pisentry-linux-arm64

@@ -7,7 +7,7 @@ body:
     attributes:
       label: Version
       description: Output of `pisentry version`
-      placeholder: v0.1.0 linux/arm64
+      placeholder: v0.2.0 linux/arm64
     validations:
       required: true
   - type: dropdown

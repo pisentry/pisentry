@@ -4,7 +4,7 @@
 #
 # Usage:
 #   sudo ./deploy/install.sh                       # download latest release
-#   sudo ./deploy/install.sh --version v0.1.0      # download a specific release
+#   sudo ./deploy/install.sh --version v0.2.0      # download a specific release
 #   sudo ./deploy/install.sh --binary ./dist/pisentry-linux-arm64   # local build
 set -euo pipefail
 

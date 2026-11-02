@@ -148,8 +148,6 @@ pisentry categories                                 print the Top 10 catalog
 
 ## Custom rules, reloaded live
 
-_On `main`, in the next release._
-
 Drop a JSON bundle in `/etc/pisentry/rules.d/` ([Rule Schema v1](docs/rule-schema.md)) and the running agent picks it up within `rules.reload_interval` (10s), or right away on `sudo systemctl reload pisentry` (SIGHUP). No restart, no lost state.
 
 The new rule set is compiled in the background and swapped in atomically, so detectors never see a half-loaded set. A broken file is rejected: the previous rules stay active, `pisentry_rules_reload_failures_total` goes up, and a PS00 event says which file and field. The agent never runs with zero rules. In Kubernetes the directory is watched, not the files, so a ConfigMap update (which swaps a `..data` symlink) is seen too.
@@ -166,7 +164,7 @@ The bundled Grafana dashboard, here fed by the attack simulation and a real Prom
 
 ![The pisentry Grafana dashboard fed by the container attack simulation and a real Prometheus evaluating the shipped alert rules: four critical and five high events, the ranked Top 10, ten firing alerts and one rejected rule reload](docs/assets/grafana-top10.png)
 
-**Alerts** (on `main`, in the next release): ten Prometheus rules ship as a plain rules file and as a `PrometheusRule`, each with a one-line runbook. The most important one is the page the agent cannot send itself, `PisentryAgentAbsent`, because an attacker with root stops the agent first.
+**Alerts**: ten Prometheus rules ship as a plain rules file and as a `PrometheusRule`, each with a one-line runbook. The most important one is the page the agent cannot send itself, `PisentryAgentAbsent`, because an attacker with root stops the agent first.
 
 The full metric list, the alert table, the API and the configuration keys are in [docs/reference.md](docs/reference.md).
 
