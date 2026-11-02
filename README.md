@@ -9,13 +9,14 @@
 [![Made With Love](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F-by%20Jonathan-red?style=flat-square)](https://github.com/MrGuato)
 [![ci](https://github.com/pisentry/pisentry/actions/workflows/ci.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/ci.yml)
 [![codeql](https://github.com/pisentry/pisentry/actions/workflows/codeql.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/codeql.yml)
+[![zizmor](https://github.com/pisentry/pisentry/actions/workflows/zizmor.yml/badge.svg)](https://github.com/pisentry/pisentry/actions/workflows/zizmor.yml)
 [![GitHub release](https://img.shields.io/github/v/release/pisentry/pisentry?style=flat-square)](https://github.com/pisentry/pisentry/releases/latest)
 ![Go version](https://img.shields.io/github/go-mod/go-version/pisentry/pisentry?style=flat-square&logo=go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/pisentry/pisentry.svg)](https://pkg.go.dev/github.com/pisentry/pisentry)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pisentry/pisentry?style=flat-square)](https://goreportcard.com/report/github.com/pisentry/pisentry)
 ![License](https://img.shields.io/github/license/pisentry/pisentry?style=flat-square)
 [![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fpisentry%2Fpisentry-blue?style=flat-square&logo=docker)](https://github.com/pisentry/pisentry/pkgs/container/pisentry)
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/pisentry/pisentry?label=OpenSSF%20Scorecard&style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/pisentry/pisentry)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16178/badge)](https://www.bestpractices.dev/projects/16178)
 ![GitHub last commit](https://img.shields.io/github/last-commit/pisentry/pisentry?style=flat-square)
 
 **A single static binary that watches a small Linux host for the ten attacks that hit it most, ranks them, and tells you where to look first.**
