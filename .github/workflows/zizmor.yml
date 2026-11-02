@@ -1,0 +1,32 @@
+name: zizmor
+
+# Audits the workflows themselves: template injection, excessive token
+# permissions, persisted credentials, cache poisoning, unpinned actions.
+# Findings go to code scanning next to CodeQL instead of failing the job,
+# so a new audit in a zizmor release cannot block an unrelated pull request.
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/**", ".github/dependabot.yml"]
+  pull_request:
+    paths: [".github/workflows/**", ".github/dependabot.yml"]
+  schedule:
+    - cron: "17 7 * * 1" # Mondays, 07:17 UTC: new audits land between workflow changes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload results to code scanning
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        with:
+          version: 1.31.1

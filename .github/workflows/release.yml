@@ -23,8 +23,16 @@ jobs:
           go-version-file: go.mod
           check-latest: true
           cache: false
+      # The tag name reaches a shell below. Only a plain release tag gets that far.
+      - name: Check tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $TAG"; exit 1; }'
       - run: go test ./...
-      - run: make dist VERSION=${{ github.ref_name }}
+      - name: Build
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: make dist VERSION="$VERSION"
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       # Keyless: the certificate names this workflow and tag, the signature is
       # recorded in the Sigstore transparency log, no long-lived key exists.
