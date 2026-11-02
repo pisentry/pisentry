@@ -205,11 +205,14 @@ def changelog():
         if not m:
             continue
         version, date = m.group(1), m.group(2) or ""
-        items = []
+        # Upgrade steps are instructions, not changes: they stay in the release notes.
+        items, section = [], ""
         for line in rest.splitlines():
             if line.startswith("[") and "]: http" in line:
                 break
-            if line.startswith("- "):
+            if line.startswith("### "):
+                section = line[4:].strip()
+            elif line.startswith("- ") and not section.startswith("Upgrading"):
                 items.append(short_bullet(line[2:]))
         out.append({"version": version, "date": date, "items": items})
     return out
@@ -476,7 +479,9 @@ def milestone_order(m):
     return (0, tuple(int(x) for x in v.groups()), m["number"]) if v else (1, (), m["number"])
 
 
-def build_model(data):
+def build_model(data, released):
+    """released: versions with a CHANGELOG release section. A milestone named
+    for one of them is part of that release card, not a second, open card."""
     ms = sorted(data.get("milestones") or [], key=milestone_order)
     issues = [issue_model(i) for i in (data.get("issues") or []) if "pull_request" not in i and i.get("milestone")]
     by_ms = {}
@@ -493,6 +498,7 @@ def build_model(data):
             "state": m["state"], "url": m["html_url"], "due": date_only(m.get("due_on")),
             "open": m["open_issues"], "closed": m["closed_issues"], "total": total,
             "pct": round(100 * m["closed_issues"] / total) if total else 0, "issues": its,
+            "released": code[1:] in released if code.startswith("v") else False,
         })
     return model
 
@@ -514,6 +520,8 @@ def render_teaser(model, log_entries, repo):
             f'{inline(e["items"][0]) if e["items"] else ""}</span></span>'
             f'<span class="ms-prog"><span class="count">released</span>{progress_svg(100)}</span></a>')
     for m in model:
+        if m["released"]:
+            continue
         rows.append(
             f'<a class="ms" href="roadmap.html#m{m["number"]}">'
             f'<span class="ms-code">{esc(m["code"] or "M" + str(m["number"]))}</span>'
@@ -527,7 +535,8 @@ def render_summary(model, data):
     closed = sum(m["closed"] for m in model)
     tag = (data.get("release") or {}).get("tag_name", "")
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    parts = [f"<span><b>{len(model)}</b> milestones</span>",
+    ahead = sum(1 for m in model if not m["released"])
+    parts = [f"<span><b>{ahead}</b> milestones ahead</span>",
              f"<span><b>{closed}</b> of <b>{total}</b> issues closed</span>"]
     if tag:
         parts.append(f"<span>Latest release <b>{esc(tag)}</b></span>")
@@ -555,27 +564,37 @@ def render_roadmap(model, log_entries, repo):
           '<button class="fbtn" type="button" data-f="closed" aria-pressed="false">Hide done</button>', "</div>"]
     out.append("".join(f))
 
+    shipped_ms = {m["code"]: m for m in model if m["released"]}
     out.append('<div class="timeline">')
     for e in reversed(log_entries):  # oldest release first, then main, then milestones
         if not e["items"]:
             continue
+        anchor, meta = "", ""
         if e["version"] == "Unreleased":
             title, chip, link = "On main, in the next release", '<span class="state state-open">unreleased</span>', \
                 f'https://github.com/{esc(repo)}/blob/main/CHANGELOG.md'
-            code = "main"
+            code, label = "main", "Details on GitHub"
         else:
             title, chip, link = f'Released {esc(e["date"])}', '<span class="state state-shipped">shipped</span>', \
                 f'https://github.com/{esc(repo)}/releases/tag/v{esc(e["version"])}'
-            code = "v" + e["version"]
+            code, label = "v" + e["version"], "Release notes"
+            m = shipped_ms.get(code)
+            if m:
+                title = esc(m["name"])
+                anchor = f' id="m{m["number"]}"'
+                meta = (f'<div class="count"><span>{m["closed"]} of {m["total"]} done</span><span>{esc(e["date"])}</span></div>'
+                        f'<a href="{esc(m["url"])}">Milestone on GitHub</a>')
         items = "".join(f"<li>{inline(x)}</li>" for x in e["items"][:8])
         if len(e["items"]) > 8:
             items += f'<li><a href="{link}">And {len(e["items"]) - 8} more changes and fixes</a></li>'
         out.append(
-            f'<article class="mcard shipped"><div class="mcard-head"><div>'
+            f'<article class="mcard shipped"{anchor}><div class="mcard-head"><div>'
             f'<div><span class="ms-code">{esc(code)}</span> {chip}</div><h2>{title}</h2></div>'
-            f'<div class="mcard-meta"><a href="{link}">Details on GitHub</a></div></div><ul>{items}</ul></article>')
+            f'<div class="mcard-meta">{meta}<a href="{link}">{label}</a></div></div><ul>{items}</ul></article>')
 
     for m in model:
+        if m["released"]:
+            continue
         due = f'<div class="count"><span>Due</span><span>{esc(m["due"])}</span></div>' if m["due"] else ""
         state = "state-closed" if m["state"] == "closed" else "state-open"
         lis = []
@@ -665,7 +684,7 @@ def main():
     log_entries = changelog()
     blocks = {}
     if "milestones" in data and "issues" in data:
-        model = build_model(data)
+        model = build_model(data, {e["version"] for e in log_entries if e["version"] != "Unreleased"})
         blocks["roadmap-teaser"] = render_teaser(model, log_entries, args.repo)
         blocks["roadmap-summary"] = render_summary(model, data)
         blocks["roadmap"] = render_roadmap(model, log_entries, args.repo)
