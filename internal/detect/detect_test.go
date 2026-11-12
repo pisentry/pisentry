@@ -152,6 +152,37 @@ func TestLearningSuppressesNewSource(t *testing.T) {
 	}
 }
 
+// After `pisentry baseline reset` the login baseline is empty, so every
+// source is new again. The agent must re-learn for learning_period instead
+// of flagging every login from an address it already knew (#52).
+func TestBaselineResetRestartsLoginLearning(t *testing.T) {
+	d, s, c := newDeps(t, func(c *config.Config) { c.LearningPeriod = config.D(time.Hour) })
+	a := NewAuth(d)
+	a.Handle(ssh("Accepted publickey for jon from 192.168.1.50 port 50000 ssh2"))
+	if n := len(s.byCat(event.SuspiciousLogin)); n != 1 {
+		t.Fatalf("new source after the learning period should alert, got %d", n)
+	}
+
+	d.Store.ResetBaselines(c.t)
+	s.evs = nil
+	c.t = c.t.Add(10 * time.Minute)
+	a.Handle(ssh("Accepted publickey for jon from 192.168.1.50 port 50001 ssh2"))
+	a.Handle(ssh("Accepted publickey for pi from 192.168.1.60 port 50002 ssh2"))
+	if n := len(s.evs); n != 0 {
+		t.Fatalf("logins inside the learning period after a reset should be quiet, got %+v", s.evs)
+	}
+
+	c.t = c.t.Add(time.Hour)
+	a.Handle(ssh("Accepted publickey for jon from 192.168.1.50 port 50003 ssh2"))
+	if n := len(s.evs); n != 0 {
+		t.Fatalf("source learned after the reset should be quiet, got %+v", s.evs)
+	}
+	a.Handle(ssh("Accepted publickey for jon from 203.0.113.80 port 50004 ssh2"))
+	if ev := s.byCat(event.SuspiciousLogin); len(ev) != 1 || ev[0].Severity != event.Medium {
+		t.Fatalf("new source once re-learning ends should be medium: %+v", ev)
+	}
+}
+
 func TestSudo(t *testing.T) {
 	d, s, _ := newDeps(t, nil)
 	a := NewAuth(d)

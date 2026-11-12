@@ -81,7 +81,7 @@ func TestLoopFastScheduleNotPersisted(t *testing.T) {
 func TestResetBaselinesForcesRescan(t *testing.T) {
 	d, _, c := newDeps(t, nil)
 	d.Store.Update(func(s *state.State) { s.Baselines.LastRun["suid"] = c.t.Add(-time.Minute) })
-	d.Store.ResetBaselines()
+	d.Store.ResetBaselines(c.t)
 	if w, _ := d.resumeDelay("suid", 6*time.Hour); w != 0 {
 		t.Fatalf("a baseline reset must force a fresh scan, got wait %v", w)
 	}
