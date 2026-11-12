@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -35,7 +36,7 @@ func TestCompileRuleRejects(t *testing.T) {
 	}
 	manyEx := make([]Exception, MaxExceptionsPerRule+1)
 	for i := range manyEx {
-		manyEx[i] = Exception{Comm: []string{"x"}}
+		manyEx[i] = Exception{Users: []string{"x"}}
 	}
 
 	cases := []struct {
@@ -53,12 +54,18 @@ func TestCompileRuleRejects(t *testing.T) {
 		{"bad category", func(r *Rule) { r.Category = "XX01" }, `field "category"`},
 		{"category not in catalog", func(r *Rule) { r.Category = "PS99" }, `unknown category "PS99"`},
 		{"bad source", func(r *Rule) { r.Source = "ebpf" }, `field "source"`},
+		{"file source not evaluated", func(r *Rule) { r.Source = "file" }, `must be process or log (got "file")`},
+		{"network source not evaluated", func(r *Rule) { r.Source = "network" }, `field "source"`},
+		{"k3s source not evaluated", func(r *Rule) { r.Source = "k3s" }, `field "source"`},
 		{"bad response", func(r *Rule) { r.Response = "reboot" }, `field "response"`},
 		{"long tag", func(r *Rule) { r.Tags = []string{long} }, `field "tags"`},
 		{"bad mitre", func(r *Rule) { r.MITRE = []string{"T12"} }, `field "mitre"`},
 		{"no conditions", func(r *Rule) { r.Match = MatchSpec{} }, `field "match"`},
 		{"too many conditions", func(r *Rule) { r.Match = MatchSpec{Any: manyConds} }, `too many conditions`},
 		{"unknown field", func(r *Rule) { r.Match.All[0].Field = "process.env" }, `match.all[0].field`},
+		{"field from another source", func(r *Rule) { r.Match.All[0].Field = "process.exe" }, `"process.exe" is not filled for source log rules`},
+		{"field no source fills", func(r *Rule) { r.Match.All[0].Field = "file.path" }, `match.all[0].field`},
+		{"user.uid is not filled", func(r *Rule) { r.Match.Any = []FieldCondition{{Field: "user.uid", Equals: []string{"0"}}} }, `match.any[0].field`},
 		{"no patterns", func(r *Rule) { r.Match.All[0] = FieldCondition{Field: "log.msg"} }, `has no patterns`},
 		{"too many patterns", func(r *Rule) { r.Match.All[0].Contains = manyPats }, `max patterns`},
 		{"empty literal", func(r *Rule) { r.Match.All[0].Contains = []string{""} }, `empty literal`},
@@ -69,12 +76,15 @@ func TestCompileRuleRejects(t *testing.T) {
 		{"backreference", func(r *Rule) { r.Match.Any = []FieldCondition{{Field: "log.msg", Regex: []string{`(a)\1`}}} }, `invalid regex`},
 		{"too many exceptions", func(r *Rule) { r.Exceptions = manyEx }, `too many exceptions`},
 		{"empty exception", func(r *Rule) { r.Exceptions = []Exception{{}} }, `would suppress all`},
-		{"exception too many values", func(r *Rule) { r.Exceptions = []Exception{{Comm: manyPats}} }, `too many values`},
-		{"exception empty value", func(r *Rule) { r.Exceptions = []Exception{{Exe: []string{""}}} }, `empty value`},
-		{"exception long value", func(r *Rule) { r.Exceptions = []Exception{{Paths: []string{long}}} }, `value length`},
-		{"exception bad glob", func(r *Rule) { r.Exceptions = []Exception{{Paths: []string{"/etc/["}}} }, `invalid glob`},
-		{"exception bad cidr", func(r *Rule) { r.Exceptions = []Exception{{CIDRs: []string{"10.0.0.0/33"}}} }, `invalid CIDR`},
-		{"exception bad ip", func(r *Rule) { r.Exceptions = []Exception{{CIDRs: []string{"not-an-ip"}}} }, `invalid CIDR`},
+		{"exception too many values", func(r *Rule) { r.Exceptions = []Exception{{Users: manyPats}} }, `too many values`},
+		{"exception empty value", func(r *Rule) { r.Exceptions = []Exception{{Users: []string{""}}} }, `empty value`},
+		{"exception long value", func(r *Rule) { r.Exceptions = []Exception{{Users: []string{long}}} }, `value length`},
+		{"exception key from another source", func(r *Rule) { r.Exceptions = []Exception{{Comm: []string{"ansible"}}} }, `exceptions[0].comm": never matches for source log rules`},
+		{"exception uids on log", func(r *Rule) { r.Exceptions = []Exception{{UIDs: []int{0}}} }, `exceptions[0].uids`},
+		{"exception cidrs", func(r *Rule) { r.Exceptions = []Exception{{CIDRs: []string{"10.0.0.0/8"}}} }, `exceptions[0].cidrs`},
+		{"exception paths", func(r *Rule) { r.Exceptions = []Exception{{Paths: []string{"/etc/*"}}} }, `exceptions[0].paths`},
+		{"exception container image", func(r *Rule) { r.Exceptions = []Exception{{ContainerImage: []string{"ghcr.io/*"}}} }, `exceptions[0].container_image`},
+		{"exception key named even with a valid one", func(r *Rule) { r.Exceptions = []Exception{{Users: []string{"pi"}, Exe: []string{"/bin/sh"}}} }, `exceptions[0].exe`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -171,59 +181,61 @@ func TestMatchAllAny(t *testing.T) {
 
 func TestExceptions(t *testing.T) {
 	uid := func(n int) *int { return &n }
-	hit := func() *EvalInput {
+	procRule := func() Rule {
+		r := baseRule()
+		r.Source = SourceProcess
+		r.Match = MatchSpec{All: []FieldCondition{{Field: "process.cmdline", Contains: []string{"site.yml"}}}}
+		return r
+	}
+	procHit := func() *EvalInput {
 		return &EvalInput{
-			Source:         SourceLog,
-			LogMsg:         "evil",
-			Process:        event.ProcessEntity{Exe: "/usr/bin/ansible-playbook", Comm: "ansible", Cmdline: "ansible-playbook site.yml", UID: uid(1000)},
-			ParentComm:     "sshd",
-			User:           event.UserEntity{Name: "deploy"},
-			ContainerImage: "ghcr.io/acme/backup:1.2",
-			Network:        event.SourceEntity{IP: "192.168.1.20"},
-			File:           event.FileEntity{Path: "/etc/cron.d/backup"},
+			Source:     SourceProcess,
+			Process:    event.ProcessEntity{Exe: "/usr/bin/ansible-playbook", Comm: "ansible", Cmdline: "ansible-playbook site.yml", UID: uid(1000)},
+			ParentComm: "sshd",
+		}
+	}
+	logHit := func() *EvalInput {
+		return &EvalInput{
+			Source:  SourceLog,
+			LogMsg:  "evil",
+			User:    event.UserEntity{Name: "deploy"},
+			Process: event.ProcessEntity{Cmdline: "ansible-playbook site.yml"},
 		}
 	}
 	cases := []struct {
 		name string
+		rule func() Rule
+		hit  func() *EvalInput
 		ex   Exception
 		mut  func(*EvalInput)
 		want bool // true = suppressed
 	}{
-		{"exe", Exception{Exe: []string{"/usr/bin/ansible-playbook"}}, nil, true},
-		{"exe miss", Exception{Exe: []string{"/usr/bin/other"}}, nil, false},
-		{"exe prefix", Exception{ExePrefix: []string{"/usr/bin/"}}, nil, true},
-		{"exe prefix miss", Exception{ExePrefix: []string{"/opt/"}}, nil, false},
-		{"comm", Exception{Comm: []string{"ansible"}}, nil, true},
-		{"comm miss", Exception{Comm: []string{"bash"}}, nil, false},
-		{"parent comm", Exception{ParentComm: []string{"sshd"}}, nil, true},
-		{"parent comm miss", Exception{ParentComm: []string{"cron"}}, nil, false},
-		{"process uid", Exception{UIDs: []int{1000}}, nil, true},
-		{"uid miss", Exception{UIDs: []int{0}}, nil, false},
-		{"user uid fallback", Exception{UIDs: []int{0}}, func(in *EvalInput) { in.Process.UID = nil; in.User.UID = uid(0) }, true},
-		{"unknown uid never matches", Exception{UIDs: []int{0}}, func(in *EvalInput) { in.Process.UID = nil }, false},
-		{"user", Exception{Users: []string{"deploy"}}, nil, true},
-		{"user miss", Exception{Users: []string{"root"}}, nil, false},
-		{"image glob", Exception{ContainerImage: []string{"ghcr.io/acme/backup:*"}}, nil, true},
-		{"image exact", Exception{ContainerImage: []string{"ghcr.io/acme/backup:1.2"}}, nil, true},
-		{"image miss", Exception{ContainerImage: []string{"docker.io/*"}}, nil, false},
-		{"cidr", Exception{CIDRs: []string{"192.168.0.0/16"}}, nil, true},
-		{"single ip", Exception{CIDRs: []string{"192.168.1.20"}}, nil, true},
-		{"v4-mapped v6", Exception{CIDRs: []string{"192.168.1.0/24"}}, func(in *EvalInput) { in.Network.IP = "::ffff:192.168.1.20" }, true},
-		{"cidr miss", Exception{CIDRs: []string{"10.0.0.0/8"}}, nil, false},
-		{"cidr unparsable ip", Exception{CIDRs: []string{"10.0.0.0/8"}}, func(in *EvalInput) { in.Network.IP = "" }, false},
-		{"path glob", Exception{Paths: []string{"/etc/cron.d/*"}}, nil, true},
-		{"path miss", Exception{Paths: []string{"/etc/systemd/*"}}, nil, false},
-		{"cmdline contains", Exception{CmdlineContains: []string{"site.yml"}}, nil, true},
-		{"cmdline miss", Exception{CmdlineContains: []string{"other.yml"}}, nil, false},
-		{"all predicates must hold", Exception{Comm: []string{"ansible"}, Users: []string{"root"}}, nil, false},
-		{"all predicates hold", Exception{Comm: []string{"ansible"}, Users: []string{"deploy"}}, nil, true},
+		{"exe", procRule, procHit, Exception{Exe: []string{"/usr/bin/ansible-playbook"}}, nil, true},
+		{"exe miss", procRule, procHit, Exception{Exe: []string{"/usr/bin/other"}}, nil, false},
+		{"exe prefix", procRule, procHit, Exception{ExePrefix: []string{"/usr/bin/"}}, nil, true},
+		{"exe prefix miss", procRule, procHit, Exception{ExePrefix: []string{"/opt/"}}, nil, false},
+		{"comm", procRule, procHit, Exception{Comm: []string{"ansible"}}, nil, true},
+		{"comm miss", procRule, procHit, Exception{Comm: []string{"bash"}}, nil, false},
+		{"parent comm", procRule, procHit, Exception{ParentComm: []string{"sshd"}}, nil, true},
+		{"parent comm miss", procRule, procHit, Exception{ParentComm: []string{"cron"}}, nil, false},
+		{"process uid", procRule, procHit, Exception{UIDs: []int{1000}}, nil, true},
+		{"uid miss", procRule, procHit, Exception{UIDs: []int{0}}, nil, false},
+		{"unknown uid never matches", procRule, procHit, Exception{UIDs: []int{0}}, func(in *EvalInput) { in.Process.UID = nil }, false},
+		{"process cmdline contains", procRule, procHit, Exception{CmdlineContains: []string{"site.yml"}}, nil, true},
+		{"all predicates must hold", procRule, procHit, Exception{Comm: []string{"ansible"}, UIDs: []int{0}}, nil, false},
+		{"all predicates hold", procRule, procHit, Exception{Comm: []string{"ansible"}, UIDs: []int{1000}}, nil, true},
+		{"user", baseRule, logHit, Exception{Users: []string{"deploy"}}, nil, true},
+		{"user miss", baseRule, logHit, Exception{Users: []string{"root"}}, nil, false},
+		{"log cmdline contains", baseRule, logHit, Exception{CmdlineContains: []string{"site.yml"}}, nil, true},
+		{"log cmdline miss", baseRule, logHit, Exception{CmdlineContains: []string{"other.yml"}}, nil, false},
+		{"log user and cmdline", baseRule, logHit, Exception{Users: []string{"deploy"}, CmdlineContains: []string{"other.yml"}}, nil, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			r := baseRule()
+			r := c.rule()
 			r.Exceptions = []Exception{c.ex}
 			cr := mustCompile(t, r)
-			in := hit()
+			in := c.hit()
 			if c.mut != nil {
 				c.mut(in)
 			}
@@ -235,41 +247,60 @@ func TestExceptions(t *testing.T) {
 
 	// Multiple exceptions are ORed.
 	r := baseRule()
-	r.Exceptions = []Exception{{Comm: []string{"nope"}}, {Users: []string{"deploy"}}}
-	if mustCompile(t, r).Match(hit()) {
+	r.Exceptions = []Exception{{Users: []string{"nope"}}, {Users: []string{"deploy"}}}
+	if mustCompile(t, r).Match(logHit()) {
 		t.Error("second exception should suppress")
 	}
 }
 
-// Every field a rule may name must be readable from EvalInput, or a rule on
+// Every field a source accepts must be readable from EvalInput, or a rule on
 // it would silently never match.
 func TestEveryAllowedFieldIsWired(t *testing.T) {
 	uid := 7
 	in := &EvalInput{
-		Process:        event.ProcessEntity{PID: 10, PPID: 1, UID: &uid, Comm: "c", Exe: "/e", Cmdline: "cmd"},
-		ParentComm:     "pc",
-		Network:        event.SourceEntity{IP: "192.0.2.1", Port: 22},
-		Proto:          "tcp",
-		User:           event.UserEntity{Name: "u", UID: &uid},
-		File:           event.FileEntity{Path: "/p"},
-		FileChange:     "modified",
-		FileContent:    "content",
-		Container:      event.ContainerEntity{ID: "cid", Pod: "pod", Namespace: "ns"},
-		ContainerImage: "img",
-		LogIdent:       "sshd",
-		LogMsg:         "msg",
-		K3sKind:        "Pod",
-		K3sSpec:        "{}",
+		Process:    event.ProcessEntity{PID: 10, PPID: 1, UID: &uid, Comm: "c", Exe: "/e", Cmdline: "cmd"},
+		ParentComm: "pc",
+		User:       event.UserEntity{Name: "u"},
+		LogIdent:   "sudo",
+		LogMsg:     "msg",
 	}
-	for f := range AllowedFields {
-		if in.Field(f) == "" {
-			t.Errorf("field %q is allowed in rules but EvalInput.Field returns nothing for it", f)
+	for src, spec := range sources {
+		for _, f := range spec.fields {
+			if in.Field(f) == "" {
+				t.Errorf("source %s allows field %q but EvalInput.Field returns nothing for it", src, f)
+			}
 		}
 	}
 	if (&EvalInput{}).Field("process.pid") != "" || (&EvalInput{}).Field("process.ppid") != "" ||
-		(&EvalInput{}).Field("process.uid") != "" || (&EvalInput{}).Field("source.port") != "" ||
-		(&EvalInput{}).Field("user.uid") != "" || (&EvalInput{}).Field("bogus") != "" {
+		(&EvalInput{}).Field("process.uid") != "" || (&EvalInput{}).Field("bogus") != "" {
 		t.Error("unset numeric fields must read as empty, not \"0\"")
+	}
+}
+
+// Each source accepts exactly the exception keys that Exception.matches reads
+// for it. An accepted key whose input the source never fills would load and
+// never suppress, which is what #51 was about.
+func TestExceptionKeysAreKnown(t *testing.T) {
+	all := Exception{
+		Exe: []string{"x"}, ExePrefix: []string{"x"}, Comm: []string{"x"}, ParentComm: []string{"x"},
+		UIDs: []int{1}, Users: []string{"x"}, ContainerImage: []string{"x"}, CIDRs: []string{"x"},
+		Paths: []string{"x"}, CmdlineContains: []string{"x"},
+	}
+	known := all.keys()
+	if len(known) != 10 {
+		t.Fatalf("Exception.keys() = %v, want all 10 keys", known)
+	}
+	for src, spec := range sources {
+		for _, k := range spec.exceptions {
+			if !slices.Contains(known, k) {
+				t.Errorf("source %s lists unknown exception key %q", src, k)
+			}
+		}
+		for _, k := range []string{"container_image", "cidrs", "paths"} {
+			if slices.Contains(spec.exceptions, k) {
+				t.Errorf("source %s accepts %q, which no detector fills", src, k)
+			}
+		}
 	}
 }
 

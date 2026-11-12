@@ -65,11 +65,17 @@ func userEntity(name string) *event.UserEntity {
 	return u
 }
 
-// learning reports whether we are still inside the initial learning period.
+// learning reports whether we are still inside the learning period, which
+// starts when the state was created or at the last baseline reset.
 func (d Deps) learning() bool {
-	var created time.Time
-	d.Store.View(func(s *state.State) { created = s.Created })
-	return d.now().Sub(created) < d.Cfg.LearningPeriod.Duration
+	var since time.Time
+	d.Store.View(func(s *state.State) {
+		since = s.Baselines.LearningSince
+		if since.IsZero() {
+			since = s.Created
+		}
+	})
+	return d.now().Sub(since) < d.Cfg.LearningPeriod.Duration
 }
 
 // resumeMin is the shortest interval whose schedule survives a restart.
