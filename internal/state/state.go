@@ -49,6 +49,9 @@ type Baselines struct {
 	SUID           map[string]FileSig              `json:"suid"`
 	SUIDReady      bool                            `json:"suid_ready"`
 	Logins         map[string]map[string]time.Time `json:"logins"` // user -> ip -> last seen
+	// LearningSince starts the learning period for login baselines. It is set
+	// by a baseline reset; zero means the period runs from State.Created.
+	LearningSince time.Time `json:"learning_since,omitempty"`
 	// LastRun is when each slow detector last finished a scan. It lives with
 	// the baselines so a baseline reset also forces a fresh scan.
 	LastRun map[string]time.Time `json:"last_run,omitempty"`
@@ -173,10 +176,11 @@ func (st *Store) Record(e event.Event) {
 	})
 }
 
-// ResetBaselines drops every learned baseline. Counters and history stay.
-func (st *Store) ResetBaselines() {
+// ResetBaselines drops every learned baseline and restarts the learning
+// period at now. Counters and history stay.
+func (st *Store) ResetBaselines(now time.Time) {
 	st.Update(func(s *State) {
-		s.Baselines = Baselines{}
+		s.Baselines = Baselines{LearningSince: now.UTC()}
 		s.init()
 	})
 }
@@ -234,12 +238,12 @@ func writeAtomic(dir string, b []byte) error {
 }
 
 // CheckResetTrigger handles `pisentry baseline reset` issued while the agent runs.
-func (st *Store) CheckResetTrigger() bool {
+func (st *Store) CheckResetTrigger(now time.Time) bool {
 	p := filepath.Join(st.dir, ResetTrigger)
 	if _, err := os.Stat(p); err != nil {
 		return false
 	}
-	st.ResetBaselines()
+	st.ResetBaselines(now)
 	_ = os.Remove(p)
 	return true
 }
