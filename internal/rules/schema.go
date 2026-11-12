@@ -4,9 +4,8 @@ package rules
 
 import (
 	"fmt"
-	"net/netip"
-	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -40,20 +39,33 @@ var (
 // Source names the telemetry stream a rule evaluates.
 type Source string
 
+// Only process and log rules are evaluated today. network, file and k3s are
+// rejected until a detector feeds them to the engine; accepting them would
+// load rules that never fire.
 const (
 	SourceProcess Source = "process"
-	SourceNetwork Source = "network"
-	SourceFile    Source = "file"
 	SourceLog     Source = "log"
-	SourceK3s     Source = "k3s"
 )
 
-var validSources = map[Source]bool{
-	SourceProcess: true,
-	SourceNetwork: true,
-	SourceFile:    true,
-	SourceLog:     true,
-	SourceK3s:     true,
+// sourceSpec lists what the detectors for one source fill in EvalInput. A rule
+// may only match on those fields and use those exception keys: anything else
+// reads as empty and would never match or never suppress.
+type sourceSpec struct {
+	fields     []string
+	exceptions []string
+}
+
+var sources = map[Source]sourceSpec{
+	// ProcWatch (internal/detect/proc.go).
+	SourceProcess: {
+		fields:     []string{"process.pid", "process.ppid", "process.uid", "process.comm", "process.exe", "process.cmdline", "process.parent_comm"},
+		exceptions: []string{"exe", "exe_prefix", "comm", "parent_comm", "uids", "cmdline_contains"},
+	},
+	// sudo command lines from the auth log (internal/detect/auth.go).
+	SourceLog: {
+		fields:     []string{"log.ident", "log.msg", "user.name", "process.cmdline"},
+		exceptions: []string{"users", "cmdline_contains"},
+	},
 }
 
 var validResponses = map[string]bool{
@@ -69,33 +81,6 @@ var validStatuses = map[string]bool{
 	"test":         true,
 	"experimental": true,
 	"deprecated":   true,
-}
-
-// AllowedFields lists the Event Schema v1 fields that rules may match on.
-var AllowedFields = map[string]bool{
-	"process.pid":         true,
-	"process.ppid":        true,
-	"process.uid":         true,
-	"process.comm":        true,
-	"process.exe":         true,
-	"process.cmdline":     true,
-	"process.parent_comm": true,
-	"source.ip":           true,
-	"source.port":         true,
-	"source.proto":        true,
-	"user.name":           true,
-	"user.uid":            true,
-	"file.path":           true,
-	"file.change":         true,
-	"file.content":        true,
-	"container.id":        true,
-	"container.pod":       true,
-	"container.namespace": true,
-	"container.image":     true,
-	"log.ident":           true,
-	"log.msg":             true,
-	"k3s.kind":            true,
-	"k3s.spec":            true,
 }
 
 // Bundle is the top-level JSON structure of a rule file in /etc/pisentry/rules.d
@@ -170,6 +155,10 @@ type FieldCondition struct {
 
 // Exception suppresses a rule match when all non-empty predicates in the
 // Exception match the input. Multiple Exceptions on a Rule are ORed together.
+//
+// ContainerImage, CIDRs and Paths are parsed only so CompileRule can reject
+// them by rule and key: no evaluated source fills a container image, an IP or
+// a file path yet, so they would never suppress anything.
 type Exception struct {
 	Exe             []string `json:"exe,omitempty"`
 	ExePrefix       []string `json:"exe_prefix,omitempty"`
@@ -181,6 +170,25 @@ type Exception struct {
 	CIDRs           []string `json:"cidrs,omitempty"`
 	Paths           []string `json:"paths,omitempty"`
 	CmdlineContains []string `json:"cmdline_contains,omitempty"`
+}
+
+// keys returns the JSON names of the non-empty keys in ex.
+func (ex Exception) keys() []string {
+	var out []string
+	for _, k := range []struct {
+		name string
+		n    int
+	}{
+		{"exe", len(ex.Exe)}, {"exe_prefix", len(ex.ExePrefix)}, {"comm", len(ex.Comm)},
+		{"parent_comm", len(ex.ParentComm)}, {"uids", len(ex.UIDs)}, {"users", len(ex.Users)},
+		{"container_image", len(ex.ContainerImage)}, {"cidrs", len(ex.CIDRs)}, {"paths", len(ex.Paths)},
+		{"cmdline_contains", len(ex.CmdlineContains)},
+	} {
+		if k.n > 0 {
+			out = append(out, k.name)
+		}
+	}
+	return out
 }
 
 // Matcher evaluates a compiled condition against a single field value.
@@ -280,44 +288,28 @@ func (cc compiledCondition) eval(in *EvalInput) bool {
 	return false
 }
 
-type compiledException struct {
-	raw      Exception
-	prefixes []netip.Prefix
-}
-
-func (ce compiledException) matches(in *EvalInput) bool {
-	r := ce.raw
-	if len(r.Exe) > 0 && !sliceContains(r.Exe, in.Process.Exe) {
+// matches reports whether every non-empty key in ex matches in. CompileRule
+// only lets through keys the rule's source fills.
+func (ex Exception) matches(in *EvalInput) bool {
+	if len(ex.Exe) > 0 && !sliceContains(ex.Exe, in.Process.Exe) {
 		return false
 	}
-	if len(r.ExePrefix) > 0 && !hasAnyPrefix(in.Process.Exe, r.ExePrefix) {
+	if len(ex.ExePrefix) > 0 && !hasAnyPrefix(in.Process.Exe, ex.ExePrefix) {
 		return false
 	}
-	if len(r.Comm) > 0 && !sliceContains(r.Comm, in.Process.Comm) {
+	if len(ex.Comm) > 0 && !sliceContains(ex.Comm, in.Process.Comm) {
 		return false
 	}
-	if len(r.ParentComm) > 0 && !sliceContains(r.ParentComm, in.ParentComm) {
+	if len(ex.ParentComm) > 0 && !sliceContains(ex.ParentComm, in.ParentComm) {
 		return false
 	}
-	if len(r.UIDs) > 0 {
-		uid := in.effectiveUID()
-		if uid < 0 || !intSliceContains(r.UIDs, uid) {
-			return false
-		}
-	}
-	if len(r.Users) > 0 && !sliceContains(r.Users, in.User.Name) {
+	if len(ex.UIDs) > 0 && (in.Process.UID == nil || !intSliceContains(ex.UIDs, *in.Process.UID)) {
 		return false
 	}
-	if len(r.ContainerImage) > 0 && !globMatchAny(r.ContainerImage, in.ContainerImage) {
+	if len(ex.Users) > 0 && !sliceContains(ex.Users, in.User.Name) {
 		return false
 	}
-	if len(ce.prefixes) > 0 && !ipInPrefixes(in.Network.IP, ce.prefixes) {
-		return false
-	}
-	if len(r.Paths) > 0 && !globMatchAny(r.Paths, in.File.Path) {
-		return false
-	}
-	if len(r.CmdlineContains) > 0 && !containsAnySubstr(in.Process.Cmdline, r.CmdlineContains) {
+	if len(ex.CmdlineContains) > 0 && !containsAnySubstr(in.Process.Cmdline, ex.CmdlineContains) {
 		return false
 	}
 	return true
@@ -328,38 +320,20 @@ type CompiledRule struct {
 	Rule       Rule
 	all        []compiledCondition
 	any        []compiledCondition
-	exceptions []compiledException
+	exceptions []Exception
 }
 
 // EvalInput represents a normalized telemetry record against which rules run.
 // It uses Event Schema v1 entity structures directly so fixtures (#31) and
-// live detectors share the exact same field model.
+// live detectors share the exact same field model. It holds only what the
+// process and log detectors fill; see sources.
 type EvalInput struct {
-	Source         Source                `json:"source"`
-	Process        event.ProcessEntity   `json:"process,omitempty"`
-	ParentComm     string                `json:"parent_comm,omitempty"`
-	Network        event.SourceEntity    `json:"network,omitempty"`
-	Proto          string                `json:"proto,omitempty"`
-	User           event.UserEntity      `json:"user,omitempty"`
-	File           event.FileEntity      `json:"file,omitempty"`
-	FileChange     string                `json:"file_change,omitempty"`
-	FileContent    string                `json:"file_content,omitempty"`
-	Container      event.ContainerEntity `json:"container,omitempty"`
-	ContainerImage string                `json:"container_image,omitempty"`
-	LogIdent       string                `json:"log_ident,omitempty"`
-	LogMsg         string                `json:"log_msg,omitempty"`
-	K3sKind        string                `json:"k3s_kind,omitempty"`
-	K3sSpec        string                `json:"k3s_spec,omitempty"`
-}
-
-func (in *EvalInput) effectiveUID() int {
-	if in.Process.UID != nil {
-		return *in.Process.UID
-	}
-	if in.User.UID != nil {
-		return *in.User.UID
-	}
-	return -1
+	Source     Source              `json:"source"`
+	Process    event.ProcessEntity `json:"process,omitempty"`
+	ParentComm string              `json:"parent_comm,omitempty"`
+	User       event.UserEntity    `json:"user,omitempty"`
+	LogIdent   string              `json:"log_ident,omitempty"`
+	LogMsg     string              `json:"log_msg,omitempty"`
 }
 
 // Field extracts a named Event Schema v1 field from EvalInput.
@@ -388,44 +362,12 @@ func (in *EvalInput) Field(name string) string {
 		return in.Process.Cmdline
 	case "process.parent_comm":
 		return in.ParentComm
-	case "source.ip":
-		return in.Network.IP
-	case "source.port":
-		if in.Network.Port == 0 {
-			return ""
-		}
-		return strconv.Itoa(in.Network.Port)
-	case "source.proto":
-		return in.Proto
 	case "user.name":
 		return in.User.Name
-	case "user.uid":
-		if in.User.UID == nil {
-			return ""
-		}
-		return strconv.Itoa(*in.User.UID)
-	case "file.path":
-		return in.File.Path
-	case "file.change":
-		return in.FileChange
-	case "file.content":
-		return in.FileContent
-	case "container.id":
-		return in.Container.ID
-	case "container.pod":
-		return in.Container.Pod
-	case "container.namespace":
-		return in.Container.Namespace
-	case "container.image":
-		return in.ContainerImage
 	case "log.ident":
 		return in.LogIdent
 	case "log.msg":
 		return in.LogMsg
-	case "k3s.kind":
-		return in.K3sKind
-	case "k3s.spec":
-		return in.K3sSpec
 	}
 	return ""
 }
@@ -545,8 +487,9 @@ func CompileRule(file string, idx int, r Rule) (*CompiledRule, error) {
 	if !knownCategory(r.Category) {
 		return nil, errf("category", "unknown category %q, see `pisentry categories`", r.Category)
 	}
-	if !validSources[r.Source] {
-		return nil, errf("source", "must be process, network, file, log or k3s (got %q)", r.Source)
+	spec, ok := sources[r.Source]
+	if !ok {
+		return nil, errf("source", "must be process or log (got %q); no detector evaluates network, file or k3s rules yet", r.Source)
 	}
 	if !validResponses[r.Response] {
 		return nil, errf("response", "invalid response %q", r.Response)
@@ -586,8 +529,9 @@ func CompileRule(file string, idx int, r Rule) (*CompiledRule, error) {
 		out := make([]compiledCondition, 0, len(cs))
 		for i, c := range cs {
 			fref := fmt.Sprintf("match.%s[%d]", branch, i)
-			if !AllowedFields[c.Field] {
-				return nil, errf(fref+".field", "unknown field %q", c.Field)
+			if !slices.Contains(spec.fields, c.Field) {
+				return nil, errf(fref+".field", "%q is not filled for source %s rules (fields: %s)",
+					c.Field, r.Source, strings.Join(spec.fields, ", "))
 			}
 			nLit := len(c.Equals) + len(c.Contains) + len(c.StartsWith) + len(c.EndsWith)
 			nReg := len(c.Regex)
@@ -650,20 +594,24 @@ func CompileRule(file string, idx int, r Rule) (*CompiledRule, error) {
 	if len(r.Exceptions) > MaxExceptionsPerRule {
 		return nil, errf("exceptions", "too many exceptions (%d > %d)", len(r.Exceptions), MaxExceptionsPerRule)
 	}
-	exList := make([]compiledException, 0, len(r.Exceptions))
 	for i, ex := range r.Exceptions {
 		fref := fmt.Sprintf("exceptions[%d]", i)
-		nVals := len(ex.Exe) + len(ex.ExePrefix) + len(ex.Comm) + len(ex.ParentComm) +
-			len(ex.UIDs) + len(ex.Users) + len(ex.ContainerImage) +
-			len(ex.CIDRs) + len(ex.Paths) + len(ex.CmdlineContains)
-		if nVals == 0 {
+		keys := ex.keys()
+		if len(keys) == 0 {
 			return nil, errf(fref, "empty exception would suppress all matches")
 		}
+		for _, k := range keys {
+			if !slices.Contains(spec.exceptions, k) {
+				return nil, errf(fref+"."+k, "never matches for source %s rules (keys: %s)",
+					r.Source, strings.Join(spec.exceptions, ", "))
+			}
+		}
+		nVals := len(ex.Exe) + len(ex.ExePrefix) + len(ex.Comm) + len(ex.ParentComm) +
+			len(ex.UIDs) + len(ex.Users) + len(ex.CmdlineContains)
 		if nVals > MaxPatternsPerRule {
 			return nil, errf(fref, "too many values (%d > %d)", nVals, MaxPatternsPerRule)
 		}
-		for _, list := range [][]string{ex.Exe, ex.ExePrefix, ex.Comm, ex.ParentComm, ex.Users,
-			ex.ContainerImage, ex.CIDRs, ex.Paths, ex.CmdlineContains} {
+		for _, list := range [][]string{ex.Exe, ex.ExePrefix, ex.Comm, ex.ParentComm, ex.Users, ex.CmdlineContains} {
 			for _, v := range list {
 				if v == "" {
 					return nil, errf(fref, "empty value")
@@ -673,63 +621,19 @@ func CompileRule(file string, idx int, r Rule) (*CompiledRule, error) {
 				}
 			}
 		}
-		for _, p := range append(append([]string(nil), ex.ContainerImage...), ex.Paths...) {
-			if _, err := filepath.Match(p, ""); err != nil {
-				return nil, errf(fref, "invalid glob %q: %v", p, err)
-			}
-		}
-		var prefixes []netip.Prefix
-		for _, cidr := range ex.CIDRs {
-			p, err := parseCIDR(cidr)
-			if err != nil {
-				return nil, errf(fref+".cidrs", "invalid CIDR or IP %q: %v", cidr, err)
-			}
-			prefixes = append(prefixes, p)
-		}
-		exList = append(exList, compiledException{raw: ex, prefixes: prefixes})
 	}
 
 	return &CompiledRule{
 		Rule:       r,
 		all:        allConds,
 		any:        anyConds,
-		exceptions: exList,
+		exceptions: r.Exceptions,
 	}, nil
 }
 
 func knownCategory(c event.Category) bool {
 	for _, ci := range event.Catalog {
 		if ci.ID == c {
-			return true
-		}
-	}
-	return false
-}
-
-func parseCIDR(s string) (netip.Prefix, error) {
-	if !strings.Contains(s, "/") {
-		a, err := netip.ParseAddr(s)
-		if err != nil {
-			return netip.Prefix{}, err
-		}
-		a = a.Unmap()
-		return netip.PrefixFrom(a, a.BitLen()), nil
-	}
-	p, err := netip.ParsePrefix(s)
-	if err != nil {
-		return netip.Prefix{}, err
-	}
-	return p.Masked(), nil
-}
-
-func ipInPrefixes(ip string, ps []netip.Prefix) bool {
-	a, err := netip.ParseAddr(ip)
-	if err != nil {
-		return false
-	}
-	a = a.Unmap()
-	for _, p := range ps {
-		if p.Contains(a) {
 			return true
 		}
 	}
@@ -766,18 +670,6 @@ func hasAnyPrefix(s string, prefixes []string) bool {
 func containsAnySubstr(s string, subs []string) bool {
 	for _, sub := range subs {
 		if sub != "" && strings.Contains(s, sub) {
-			return true
-		}
-	}
-	return false
-}
-
-func globMatchAny(patterns []string, val string) bool {
-	for _, p := range patterns {
-		if p == val {
-			return true
-		}
-		if ok, _ := filepath.Match(p, val); ok {
 			return true
 		}
 	}

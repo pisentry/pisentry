@@ -13,7 +13,7 @@ import (
 func FuzzLoadBytes(f *testing.F) {
 	f.Add(DefaultBytes())
 	f.Add([]byte(`{"schema_version":1,"rules":[{"id":"A","title":"a","category":"PS04","level":"high","source":"log","match":{"all":[{"field":"log.msg","regex":["(a+)+$"]}]}}]}`))
-	f.Add([]byte(`{"schema_version":1,"rules":[{"id":"B","title":"b","category":"PS06","level":"low","source":"process","match":{"any":[{"field":"process.comm","equals":["x"],"case_insensitive":true}]},"exceptions":[{"cidrs":["10.0.0.0/8","::1"],"paths":["/tmp/*"]}]}]}`))
+	f.Add([]byte(`{"schema_version":1,"rules":[{"id":"B","title":"b","category":"PS06","level":"low","source":"process","match":{"any":[{"field":"process.comm","equals":["x"],"case_insensitive":true}]},"exceptions":[{"exe_prefix":["/usr/"],"uids":[0]}]}]}`))
 	f.Add([]byte(`{"schema_version":1,"catalog":{"stratum_ports":[3333],"fim_watches":[{"pattern":"/etc/x","category":"PS10","severity":"high"}]}}`))
 	f.Add([]byte(`{"schema_version":1,"rules":[]} {}`))
 	f.Add([]byte(`{"schema_version":2}`))
@@ -39,9 +39,7 @@ func FuzzLoadBytes(f *testing.F) {
 		in := &EvalInput{
 			Process:    event.ProcessEntity{PID: 1, UID: &uid, Comm: val, Exe: val, Cmdline: val},
 			ParentComm: val,
-			Network:    event.SourceEntity{IP: val},
 			User:       event.UserEntity{Name: val, UID: &uid},
-			File:       event.FileEntity{Path: val},
 			LogIdent:   val,
 			LogMsg:     val,
 		}
