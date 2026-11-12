@@ -1,8 +1,16 @@
 package logsrc
 
 import (
+	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/pisentry/pisentry/internal/metrics"
 )
 
 func TestParseSyslog(t *testing.T) {
@@ -36,5 +44,89 @@ func TestFromJournal(t *testing.T) {
 	l, ok = FromJournal(e)
 	if !ok || l.Msg != "SRC=1" || !l.Kernel || l.Ident != "kernel" {
 		t.Errorf("%+v", l)
+	}
+}
+
+// logrotate `create` renames auth.log and creates a new one, and rsyslog keeps
+// writing to the renamed file until it is told to reopen. Those lines are read
+// before the tailer moves to the new file (#53).
+func TestTailFileReadsRenamedFileBeforeReopen(t *testing.T) {
+	old := tailInterval
+	tailInterval = 200 * time.Millisecond
+	t.Cleanup(func() { tailInterval = old })
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "auth.log")
+	appendLine := func(p, msg string) {
+		t.Helper()
+		f, err := os.OpenFile(p, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.WriteString("Oct 15 10:01:02 pi sshd[1]: " + msg + "\n"); err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+	}
+	appendLine(path, "before start")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	out := make(chan Line, 64)
+	done := make(chan struct{})
+	go func() {
+		tailFile(ctx, path, out, metrics.NewSet(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+		close(done)
+	}()
+	defer func() { cancel(); <-done }()
+
+	next := func() string {
+		t.Helper()
+		select {
+		case l := <-out:
+			return l.Msg
+		case <-time.After(5 * time.Second):
+			t.Fatal("timed out waiting for a line")
+			return ""
+		}
+	}
+
+	// The tailer starts at the end of the file. Write until it sees a line,
+	// so the rest of the test does not depend on when it opened the file.
+	for i := 0; ; i++ {
+		appendLine(path, "warmup")
+		select {
+		case l := <-out:
+			if l.Msg != "warmup" {
+				t.Fatalf("got %q before warmup", l.Msg)
+			}
+		case <-time.After(300 * time.Millisecond):
+			if i > 20 {
+				t.Fatal("tailer never picked up the file")
+			}
+			continue
+		}
+		break
+	}
+	for len(out) > 0 {
+		<-out
+	}
+
+	appendLine(path, "line A")
+	if got := next(); got != "line A" {
+		t.Fatalf("got %q, want line A", got)
+	}
+	// All three steps land inside one poll interval, so the tailer sees the
+	// new inode with line B still unread in the old file.
+	if err := os.Rename(path, path+".1"); err != nil {
+		t.Fatal(err)
+	}
+	appendLine(path+".1", "line B")
+	appendLine(path, "line C")
+
+	for _, want := range []string{"line B", "line C"} {
+		if got := next(); got != want {
+			t.Fatalf("got %q, want %q", got, want)
+		}
 	}
 }

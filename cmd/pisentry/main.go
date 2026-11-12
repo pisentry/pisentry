@@ -210,7 +210,7 @@ func cmdRun(args []string) error {
 			log.Info("shutting down")
 			return store.Save(true)
 		case <-t.C:
-			if store.CheckResetTrigger() {
+			if store.CheckResetTrigger(time.Now()) {
 				log.Warn("baseline reset requested; re-learning")
 			}
 			if err := store.Save(false); err != nil {
