@@ -39,9 +39,7 @@ func FuzzLoadBytes(f *testing.F) {
 		in := &EvalInput{
 			Process:    event.ProcessEntity{PID: 1, UID: &uid, Comm: val, Exe: val, Cmdline: val},
 			ParentComm: val,
-			Network:    event.SourceEntity{IP: val},
 			User:       event.UserEntity{Name: val, UID: &uid},
-			File:       event.FileEntity{Path: val},
 			LogIdent:   val,
 			LogMsg:     val,
 		}
