@@ -51,7 +51,7 @@ Field names follow Sigma where they map cleanly, so SigmaHQ Linux rules can be c
 | `title` | yes | At most 256 bytes. Becomes `rule.title` on the event. |
 | `category` | yes | `PS01`..`PS10`, see `pisentry categories`. |
 | `level` | no | `info` (default), `low`, `medium`, `high`, `critical`. Becomes the event severity. |
-| `source` | yes | Telemetry stream: `process`, `network`, `file`, `log`, `k3s`. |
+| `source` | yes | Telemetry stream: `process` or `log`. `network`, `file` and `k3s` are rejected until a detector evaluates them. |
 | `match` | yes | See below. |
 | `mitre` / `tags` | no | Technique IDs (`T1548.001`). Sigma tags of the form `attack.t1548.001` are added to `mitre`. |
 | `status` | no | `stable`, `test`, `experimental`, `deprecated`. |
@@ -71,15 +71,22 @@ Field names follow Sigma where they map cleanly, so SigmaHQ Linux rules can be c
 
 Limits per rule: 32 conditions, 64 patterns. Exceeding a limit rejects the file; nothing is truncated.
 
-### Fields
+### Fields and exception keys by source
 
-Rules match on [Event Schema v1](event-schema.md) names: `process.pid`, `process.ppid`, `process.uid`, `process.comm`, `process.exe`, `process.cmdline`, `process.parent_comm`, `source.ip`, `source.port`, `source.proto`, `user.name`, `user.uid`, `file.path`, `file.change`, `file.content`, `container.id`, `container.pod`, `container.namespace`, `container.image`, `log.ident`, `log.msg`, `k3s.kind`, `k3s.spec`. Any other name is a load error.
+A rule may only use the fields and exception keys its source fills. Anything else is a load error naming the rule and field, because it would load cleanly and never fire or never suppress.
 
-Which fields a detector fills depends on the source. `log` rules on sudo see `log.ident`, `log.msg`, `user.name` and the command as `process.cmdline`. `process` rules see the `process.*` fields; `process.uid` and `process.parent_comm` cost extra `/proc` reads, which only happen for every process when some rule matches on them.
+| Source | What feeds it | Fields | Exception keys |
+|---|---|---|---|
+| `process` | The process scan | `process.pid`, `process.ppid`, `process.uid`, `process.comm`, `process.exe`, `process.cmdline`, `process.parent_comm` | `exe`, `exe_prefix`, `comm`, `parent_comm`, `uids`, `cmdline_contains` |
+| `log` | sudo commands in the auth log | `log.ident` (always `sudo`), `log.msg`, `user.name`, `process.cmdline` (the command) | `users`, `cmdline_contains` |
+
+Field names are [Event Schema v1](event-schema.md) names. `process.uid` and `process.parent_comm` cost extra `/proc` reads, which only happen for every process when some rule matches on them; otherwise they are read after a match, which is enough for exceptions.
+
+`container_image`, `cidrs` and `paths` exceptions, and fields such as `source.ip`, `file.path` or `container.image`, will be accepted once a detector feeds network, file or k3s rules.
 
 ### Exceptions
 
-An exception suppresses a match when every non-empty key in it matches. Several exceptions on a rule are ORed. Keys: `exe`, `exe_prefix`, `comm`, `parent_comm`, `uids`, `users`, `container_image` (glob), `cidrs` (CIDR or bare IP), `paths` (glob), `cmdline_contains`. An empty exception is rejected because it would silence the rule.
+An exception suppresses a match when every non-empty key in it matches. Several exceptions on a rule are ORed. An empty exception is rejected because it would silence the rule.
 
 To add an exception to a built-in rule, copy the rule into `rules.d` with the same `id` and add `exceptions`. A rule in `rules.d` with a built-in `id` replaces the built-in rule. Two files in `rules.d` defining the same `id` is an error.
 
@@ -124,6 +131,6 @@ Each file is one normalized input with the same shape the detectors build:
 }
 ```
 
-Input keys: `source`, `process` (`pid`, `ppid`, `uid`, `comm`, `exe`, `cmdline`), `parent_comm`, `network` (`ip`, `port`), `proto`, `user` (`name`, `uid`), `file` (`path`), `file_change`, `file_content`, `container` (`id`, `pod`, `namespace`), `container_image`, `log_ident`, `log_msg`, `k3s_kind`, `k3s_spec`. Unknown keys fail the test, so a typo cannot turn a positive fixture into a no-op.
+Input keys: `source`, `process` (`pid`, `ppid`, `uid`, `comm`, `exe`, `cmdline`), `parent_comm`, `user` (`name`), `log_ident`, `log_msg`. Unknown keys fail the test, so a typo cannot turn a positive fixture into a no-op.
 
 `go test ./internal/rules/...` replays them with no root and no network. It fails when a rule lacks either kind, when a fixture directory names no rule, or when any fixture gives the wrong verdict. `make sim` stays the end-to-end check.
