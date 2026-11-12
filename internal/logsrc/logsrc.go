@@ -256,6 +256,9 @@ func ParseSyslog(s string) (Line, bool) {
 	return Line{Time: time.Now(), Ident: mm[1], Msg: mm[2], Kernel: mm[1] == "kernel", UID: -1}, true
 }
 
+// tailInterval is how often tailFile polls for new lines and rotation.
+var tailInterval = time.Second
+
 // tailFile follows a file from its current end, reopening on rotation.
 func tailFile(ctx context.Context, path string, out chan<- Line, m *metrics.Set, log *slog.Logger) {
 	var (
@@ -284,29 +287,46 @@ func tailFile(ctx context.Context, path string, out chan<- Line, m *metrics.Set,
 		}
 		f, rd, buf = nf, bufio.NewReader(nf), ""
 	}
+	emit := func(line string) bool {
+		l, ok := ParseSyslog(strings.TrimRight(line, "\r\n"))
+		if !ok {
+			return true
+		}
+		m.LogLines.Inc("file")
+		select {
+		case out <- l:
+			return true
+		case <-ctx.Done():
+			return false
+		}
+	}
+	// drain reads every complete line up to EOF. It reports false once ctx
+	// is done.
+	drain := func() bool {
+		if f == nil {
+			return true
+		}
+		for {
+			chunk, err := rd.ReadString('\n')
+			offset += int64(len(chunk))
+			buf += chunk
+			if err != nil {
+				return true
+			}
+			line := buf
+			buf = ""
+			if !emit(line) {
+				return false
+			}
+		}
+	}
 	open(true)
-	tick := time.NewTicker(time.Second)
+	tick := time.NewTicker(tailInterval)
 	defer tick.Stop()
 	for {
-		if f != nil {
-			for {
-				chunk, err := rd.ReadString('\n')
-				offset += int64(len(chunk))
-				buf += chunk
-				if err != nil {
-					break
-				}
-				line := strings.TrimRight(buf, "\r\n")
-				buf = ""
-				if l, ok := ParseSyslog(line); ok {
-					m.LogLines.Inc("file")
-					select {
-					case out <- l:
-					case <-ctx.Done():
-						return
-					}
-				}
-			}
+		if !drain() {
+			f.Close()
+			return
 		}
 		select {
 		case <-ctx.Done():
@@ -328,6 +348,19 @@ func tailFile(ctx context.Context, path string, out chan<- Line, m *metrics.Set,
 		if f == nil || cur != ino || st.Size() < offset {
 			if f != nil {
 				log.Info("log rotated, reopening", "path", path)
+			}
+			if f != nil && cur != ino {
+				// The old file was renamed, not truncated: the writer may
+				// have added lines to it since the last read. Read them
+				// before letting go, including a last line with no newline.
+				if !drain() {
+					f.Close()
+					return
+				}
+				if buf != "" && !emit(buf) {
+					f.Close()
+					return
+				}
 			}
 			open(false)
 		}
