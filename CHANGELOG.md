@@ -4,9 +4,23 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-11
+
+Bug fixes from a code review. No config changes.
+
+### Upgrading from v0.2.0
+
+- Rule bundles in `rules.d`: run `pisentry check` before upgrading. Rules that loaded in v0.2.0 but could never fire are now rejected (see Fixed). A rejected bundle makes the agent fall back to the built-in rules and raise a High PS00 event, as with any broken bundle
+
 ### Changed
 
 - Kubernetes base pins the v0.2.0 image: the DaemonSet now runs `ghcr.io/pisentry/pisentry:v0.2.0` by digest, and the staging overlay comment shows the same override
+
+### Fixed
+
+- Rules with `source` `network`, `file` or `k3s`, conditions on fields their source never fills (such as `file.path`, `source.ip`, `container.image` or `user.uid`), and `cidrs`, `paths` or `container_image` exceptions passed `pisentry check` and counted in `pisentry_rules_loaded`, but never fired or never suppressed anything. The loader now rejects them and names the rule and field. `docs/rule-schema.md` lists the fields and exception keys each source supports (#51)
+- `pisentry baseline reset` now restarts the learning period for SSH login baselines. Before, the next login of every user, even from an address seen many times, raised a Medium PS02 "first login from this source" (#52)
+- File-mode log tailing reads the rotated file to the end before opening the new one. With logrotate `create`, lines rsyslog wrote to the renamed file in the last poll, or before it got HUP, were lost, and an attack during rotation could fall in that gap. Journald mode was not affected (#53)
 
 ## [0.2.0] - 2026-11-01
 
@@ -78,6 +92,7 @@ First release.
 - Flux-ready Kubernetes manifests: DaemonSet, NetworkPolicy, PodMonitor, Grafana dashboard
 - Safe, self-cleaning attack simulation script
 
-[Unreleased]: https://github.com/pisentry/pisentry/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/pisentry/pisentry/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/pisentry/pisentry/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/pisentry/pisentry/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pisentry/pisentry/releases/tag/v0.1.0
