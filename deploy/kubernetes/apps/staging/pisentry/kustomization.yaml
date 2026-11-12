@@ -12,5 +12,5 @@ resources:
 # override the image here instead of in base.
 # images:
 #   - name: ghcr.io/pisentry/pisentry
-#     newTag: v0.2.0
-#     digest: sha256:db3b30d5c0b533a35f02c635bc37a8997b69caa288ed7a54a621588735073af3
+#     newTag: v0.2.1
+#     digest: sha256:5e2901cbe588380dc31366744a02482a8f76226e66094570edf5f9a30d8f7444

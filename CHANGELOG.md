@@ -4,6 +4,10 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Changed
+
+- Kubernetes base pins the v0.2.1 image: the DaemonSet now runs `ghcr.io/pisentry/pisentry:v0.2.1` by digest, and the staging overlay comment shows the same override
+
 ## [0.2.1] - 2026-11-11
 
 Bug fixes from a code review. No config changes.
