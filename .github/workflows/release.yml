@@ -52,6 +52,55 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* \
             --verify-tag --title "pisentry $GITHUB_REF_NAME" --notes-file notes.md
 
+  # Signs the rule packs as a bundle for `pisentry update-patterns` and
+  # attaches it to the release. The Ed25519 key is a secret of the
+  # rules-signing environment, which has a required reviewer: nothing is
+  # signed until a maintainer approves this job. One-time setup and key
+  # rotation: docs/rule-schema.md ("Signed bundles"). Re-running this job
+  # later signs the same files with a newer version and a fresh expiry.
+  rules-bundle:
+    needs: binaries # the release must exist to attach to
+    runs-on: ubuntu-latest
+    environment: rules-signing
+    permissions:
+      contents: write # attach the bundle to the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: false
+      # The version is the signing time, so it only goes up, also on a re-run.
+      # Packs written for this release may use anything this release added,
+      # so older agents are told to upgrade first.
+      - name: Sign bundle
+        id: sign
+        env:
+          PISENTRY_BUNDLE_KEY: ${{ secrets.RULES_SIGNING_KEY }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          shopt -s nullglob
+          packs=(deploy/rules/packs/*.json)
+          if [ ${#packs[@]} -eq 0 ]; then
+            echo "::notice::no rule packs in deploy/rules/packs, nothing to sign"
+            exit 0
+          fi
+          go run ./cmd/pisentry-bundle sign -version "$(date -u +%Y%m%d%H%M)" -min-agent "$TAG" -out bundle "${packs[@]}"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+      # Fails if the signing key is not one of the keys embedded in this
+      # release, so a bundle no agent would accept is never published.
+      - name: Verify with the embedded keys
+        if: steps.sign.outputs.signed == 'true'
+        run: go run ./cmd/pisentry check -rules bundle
+      - name: Attach to release
+        if: steps.sign.outputs.signed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" bundle/* --clobber
+
   image:
     needs: binaries # no image unless tests pass
     runs-on: ubuntu-latest

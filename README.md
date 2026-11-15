@@ -139,6 +139,7 @@ pisentry report     [-since 24h] [-json]            ranked Top 10 from saved sta
 pisentry audit      [-json]                         one-shot posture audit, exit 2 on high/critical
 pisentry baseline   reset                           re-learn baselines (the running agent picks it up)
 pisentry check      [-rules PATH]                   validate rule bundles, exit 1 naming the file, rule and field
+pisentry update-patterns [-url URL] [-rules DIR]    install a signed rule bundle, exit 1 if rejected
 pisentry test-alert                                 send a test webhook
 pisentry categories                                 print the Top 10 catalog
 ```
@@ -154,6 +155,8 @@ pisentry categories                                 print the Top 10 catalog
 Drop a JSON bundle in `/etc/pisentry/rules.d/` ([Rule Schema v1](docs/rule-schema.md)) and the running agent picks it up within `rules.reload_interval` (10s), or right away on `sudo systemctl reload pisentry` (SIGHUP). No restart, no lost state.
 
 The new rule set is compiled in the background and swapped in atomically, so detectors never see a half-loaded set. A broken file is rejected: the previous rules stay active, `pisentry_rules_reload_failures_total` goes up, and a PS00 event says which file and field. The agent never runs with zero rules. In Kubernetes the directory is watched, not the files, so a ConfigMap update (which swaps a `..data` symlink) is seen too.
+
+Rule updates between releases ship as signed bundles: `sudo pisentry update-patterns` checks the Ed25519 signature, every file hash, that the version is newer than the installed one and that the manifest has not expired, then installs into `rules.d` and reloads. In Kubernetes, deliver the bundle as a ConfigMap and the agent only verifies it. See [Signed bundles](docs/rule-schema.md#signed-bundles).
 
 ![A local rule for packet capture through sudo is copied into rules.d and loaded on SIGHUP, fires on a matching sudo line, then a truncated file is rejected with a PS00 event while the previous 11 rules stay active](docs/assets/demo-reload.gif)
 

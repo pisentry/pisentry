@@ -298,6 +298,7 @@ func LoadOrDefault(dir string, disabledPacks []string) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	files = skipDisabledBundleFiles(files, disabledPacks)
 	if len(files) == 0 {
 		return base, nil
 	}

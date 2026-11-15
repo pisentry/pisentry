@@ -171,6 +171,7 @@ type Set struct {
 	RulesLoaded      *Vec
 	RulesLastReload  *Vec
 	RulesReloadFails *Vec
+	RulesBundle      *Vec
 }
 
 func NewSet() *Set {
@@ -195,5 +196,6 @@ func NewSet() *Set {
 		RulesLoaded:      r.Gauge("pisentry_rules_loaded", "Rules in the active rule set."),
 		RulesLastReload:  r.Gauge("pisentry_rules_last_reload_timestamp_seconds", "Unix time the active rule set was loaded."),
 		RulesReloadFails: r.Counter("pisentry_rules_reload_failures_total", "Rule reloads rejected; the previous rule set stayed active."),
+		RulesBundle:      r.Gauge("pisentry_rules_bundle_version", "Version of the signed rule bundle in the active rule set; 0 when none is installed."),
 	}
 }

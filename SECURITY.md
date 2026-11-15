@@ -57,6 +57,7 @@ Every input is attacker-controlled: log lines, file names and contents, process 
 - Releases are built by GitHub Actions from version tags pushed by the maintainer, never from a laptop
 - Binaries ship with `SHA256SUMS`. Verify with `sha256sum --check --ignore-missing SHA256SUMS`
 - The image and `SHA256SUMS` are signed with cosign in keyless mode. The signing identity is the release workflow in this repository, attested by GitHub's OIDC issuer, and every signature is recorded in the Sigstore transparency log. There is no long-lived signing key to steal. `v0.1.0` predates signing; verify it by digest and provenance
+- Rule bundles for `pisentry update-patterns` are signed with an Ed25519 key, because the agent verifies them offline with keys embedded in the binary. The private key is a secret of a GitHub environment with a required reviewer and is used only by the release workflow. The manifest has a version that only goes up and an expiry, so an old signed bundle cannot be replayed. Details in [docs/rule-schema.md](docs/rule-schema.md#signed-bundles)
 - Images ship with SLSA provenance and an SBOM. Inspect with `docker buildx imagetools inspect ghcr.io/pisentry/pisentry:<tag> --format '{{json .Provenance}}'`
 - Every GitHub Action is pinned to a commit SHA and every base image to a digest. Dependabot proposes the updates; a human merges them
 - CI runs `govulncheck` against the Go standard library on every push, so a toolchain vulnerability fails the build instead of shipping
