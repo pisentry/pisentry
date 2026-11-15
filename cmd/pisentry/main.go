@@ -47,6 +47,8 @@ Usage:
   pisentry baseline   reset [-config FILE]           re-learn FIM/listener/SUID baselines
   pisentry test-alert [-config FILE]                 send a test webhook alert
   pisentry check      [-config FILE] [-rules DIR]    validate rule bundles (exit 1 on error)
+  pisentry update-patterns [-config FILE] [-url URL] [-rules DIR] [-no-reload]
+                                                     install a signed rule bundle (exit 1 if rejected)
   pisentry categories                                print the Top 10 catalog
   pisentry version
 `, version)
@@ -72,6 +74,8 @@ func main() {
 		err = cmdTestAlert(os.Args[2:])
 	case "check":
 		err = cmdCheck(os.Args[2:])
+	case "update-patterns":
+		err = cmdUpdatePatterns(os.Args[2:])
 	case "categories":
 		for _, c := range event.Catalog {
 			fmt.Printf("%s  %-24s %-28s %s\n", c.ID, c.Name, fmt.Sprint(c.MITRE), c.Description)
@@ -150,7 +154,9 @@ func cmdRun(args []string) error {
 		log.Info("alerts enabled", "type", cfg.Alerts.Type, "min_severity", cfg.Alerts.MinSeverity.String())
 	}
 
-	live := rules.NewLive(cfg.Rules.Dir, loadRules(cfg, log))
+	re, bundle := loadRules(cfg, log)
+	live := rules.NewLive(cfg.Rules.Dir, re)
+	noteBundle(bundle, m, log)
 	m.RulesLoaded.Set(float64(len(live.Get().Rules())))
 	m.RulesLastReload.Set(float64(time.Now().Unix()))
 	m.RulesReloadFails.Add(0)
@@ -328,14 +334,30 @@ func cmdAudit(args []string) (int, error) {
 // operator bundle must not take detection down with it, so on error the agent
 // logs loudly and runs on the built-in rules. `pisentry check` catches the
 // same error before a restart.
-func loadRules(cfg *config.Config, log *slog.Logger) *rules.Engine {
-	re, err := rules.LoadOrDefault(cfg.Rules.Dir)
+func loadRules(cfg *config.Config, log *slog.Logger) (*rules.Engine, *rules.Manifest) {
+	re, bundle, err := rules.Load(cfg.Rules.Dir)
 	if err != nil {
 		log.Error("rules.d rejected; running on built-in rules only", "dir", cfg.Rules.Dir, "err", err)
-		re = rules.Default()
+		re, bundle = rules.Default(), nil
 	}
 	log.Info("rules loaded", "rules", len(re.Rules()), "dir", cfg.Rules.Dir)
-	return re
+	return re, bundle
+}
+
+// noteBundle reports the signed bundle in the active rule set. An expired
+// bundle still loads: it was verified, and dropping it would drop rules. It
+// is logged so a stale update source gets noticed.
+func noteBundle(b *rules.Manifest, m *metrics.Set, log *slog.Logger) {
+	if b == nil {
+		m.RulesBundle.Set(0)
+		return
+	}
+	m.RulesBundle.Set(float64(b.Version))
+	if err := b.CheckFresh(time.Now()); err != nil {
+		log.Warn("signed rule bundle has expired; run pisentry update-patterns", "version", b.Version, "expires", b.Expires)
+		return
+	}
+	log.Info("signed rule bundle verified", "version", b.Version, "expires", b.Expires, "files", len(b.Files))
 }
 
 // ruleReloadDebounce is how long rules.d must stay unchanged before a reload,
@@ -365,6 +387,7 @@ func onRulesReloaded(r rules.ReloadResult, dir string, emit event.Emitter, m *me
 	m.RulesLoaded.Set(float64(n))
 	m.RulesLastReload.Set(float64(time.Now().Unix()))
 	log.Info("rules reloaded", "trigger", r.Trigger, "dir", dir, "rules", n)
+	noteBundle(r.Bundle, m, log)
 }
 
 // cmdCheck validates rule bundles and exits non-zero on the first error,
@@ -382,15 +405,41 @@ func cmdCheck(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("ok: %s, %d rules\n", *dir, len(re.Rules()))
+		note := ""
+		if fi, err := os.Stat(*dir); err == nil && fi.IsDir() {
+			if note, err = checkBundle(*dir); err != nil {
+				return err
+			}
+		}
+		fmt.Printf("ok: %s, %d rules%s\n", *dir, len(re.Rules()), note)
 		return nil
 	}
-	re, err := rules.LoadOrDefault(cfg.Rules.Dir)
+	re, _, err := rules.Load(cfg.Rules.Dir)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("ok: built-in rules plus %s, %d rules\n", cfg.Rules.Dir, len(re.Rules()))
+	note, err := checkBundle(cfg.Rules.Dir)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("ok: built-in rules plus %s, %d rules%s\n", cfg.Rules.Dir, len(re.Rules()), note)
 	return nil
+}
+
+// checkBundle applies every check update-patterns would to the signed bundle
+// in dir, if there is one, so a GitOps pipeline can gate a ConfigMap on it.
+func checkBundle(dir string) (string, error) {
+	b, err := rules.VerifyDir(dir, rules.TrustedKeys())
+	if err != nil || b == nil {
+		return "", err
+	}
+	if err := b.CheckFresh(time.Now()); err != nil {
+		return "", err
+	}
+	if err := b.CheckAgent(version); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf(", signed bundle version %d (expires %s)", b.Version, b.Expires.UTC().Format(time.RFC3339)), nil
 }
 
 func cmdBaseline(args []string) error {

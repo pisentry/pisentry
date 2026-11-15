@@ -37,6 +37,7 @@ pisentry report     [-since 24h] [-json]            ranked Top 10 from saved sta
 pisentry audit      [-json]                         one-shot posture audit, exit 2 on high/critical
 pisentry baseline   reset                           re-learn baselines (the running agent picks it up)
 pisentry check      [-rules PATH]                   validate rule bundles, exit 1 naming the file, rule and field
+pisentry update-patterns [-url URL] [-rules DIR]    install a signed rule bundle, exit 1 if rejected
 pisentry test-alert                                 send a test webhook
 pisentry categories                                 print the Top 10 catalog
 ```
@@ -100,6 +101,7 @@ Secrets (webhook URL and token) are read from the environment, never from config
 | `pisentry_rules_loaded` | gauge | | Rules in the active set |
 | `pisentry_rules_last_reload_timestamp_seconds` | gauge | | When the active set was loaded |
 | `pisentry_rules_reload_failures_total` | counter | | Reloads rejected; the previous set stayed active |
+| `pisentry_rules_bundle_version` | gauge | | Version of the signed rule bundle in the active set, 0 if none |
 | `pisentry_up`, `pisentry_build_info` | gauge | `host` / `version`, `goarch` | |
 
 **HTTP API:** `GET /api/top10?window=24h` and `GET /api/events?limit=100` on the same listener.
