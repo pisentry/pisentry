@@ -1,0 +1,18 @@
+{
+  "max_regression_pct": 20,
+  "benchmarks": [
+    {"name": "SanitizeEvent/clean", "per": "event", "hot": true, "ns_per_op": 4000, "allocs_per_op": 0},
+    {"name": "SanitizeEvent/hostile", "per": "event", "hot": true, "ns_per_op": 30000, "allocs_per_op": 15},
+    {"name": "EncodeEvent", "per": "event", "hot": true, "ns_per_op": 8000, "allocs_per_op": 16},
+    {"name": "Emit", "per": "event", "hot": true, "ns_per_op": 15000, "allocs_per_op": 30},
+    {"name": "RuleMatch/process/rules=75", "per": "event", "hot": true, "ns_per_op": 150000, "allocs_per_op": 5},
+    {"name": "RuleMatch/process/rules=500", "per": "event", "hot": true, "ns_per_op": 1000000, "allocs_per_op": 28},
+    {"name": "RuleMatch/process/rules=1000", "per": "event", "hot": true, "ns_per_op": 2000000, "allocs_per_op": 55},
+    {"name": "RuleMatch/sudo/rules=75", "per": "event", "hot": true, "ns_per_op": 120000, "allocs_per_op": 8},
+    {"name": "RuleMatch/sudo/rules=500", "per": "event", "hot": true, "ns_per_op": 800000, "allocs_per_op": 55},
+    {"name": "RuleMatch/sudo/rules=1000", "per": "event", "hot": true, "ns_per_op": 2000000, "allocs_per_op": 110},
+    {"name": "ProcScan/basic", "per": "scan of 180 processes", "hot": false, "ns_per_op": 5000000, "allocs_per_op": 5300},
+    {"name": "ProcScan/parent_comm", "per": "scan of 180 processes", "hot": false, "ns_per_op": 5000000, "allocs_per_op": 5500},
+    {"name": "ProcScan/default", "per": "scan of 180 processes", "hot": false, "ns_per_op": 12000000, "allocs_per_op": 5600}
+  ]
+}

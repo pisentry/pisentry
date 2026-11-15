@@ -1,0 +1,24 @@
+# Symlinks to create when the fixture is copied: <path> <target>.
+# Git on some checkouts cannot store them, so they live here.
+1/exe /usr/lib/systemd/systemd
+233/exe /usr/lib/systemd/systemd-journald
+402/exe /usr/sbin/rsyslogd
+455/exe /usr/sbin/cron
+512/exe /usr/sbin/avahi-daemon
+640/exe /usr/sbin/sshd
+812/exe /usr/local/bin/k3s
+903/exe /var/lib/rancher/k3s/data/current/bin/containerd
+1290/exe /var/lib/rancher/k3s/data/current/bin/containerd-shim-runc-v2
+1312/exe /pause
+1388/exe /coredns
+2210/exe /bin/prometheus
+3001/exe /usr/local/bin/pisentry
+5001/exe /usr/sbin/sshd
+5120/exe /usr/bin/bash
+5120/fd/0 /dev/pts/0
+5120/fd/1 /dev/pts/0
+5120/fd/2 /dev/pts/0
+5140/exe /usr/bin/htop
+5140/fd/0 /dev/pts/0
+5140/fd/1 /dev/pts/0
+5140/fd/2 /dev/pts/0

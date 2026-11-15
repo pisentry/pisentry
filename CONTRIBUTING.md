@@ -47,6 +47,10 @@ If you add a category, add a step to both `scripts/sim-container/sim.sh` and `sc
 
 Log lines, `/proc` fields, file names and rule files are attacker controlled and a root process parses them. Each parser has a native Go fuzz target; `make fuzz` runs them all (`FUZZTIME=10m make fuzz` for a longer pass). If you add a parser, add a target to the `FUZZ_TARGETS` list in the Makefile and the matrix in `.github/workflows/fuzz.yml`. A crasher is written to `<pkg>/testdata/fuzz/<target>/`; commit it with the fix and plain `go test` replays it from then on.
 
+## Benchmarks
+
+The event path (sanitizer, rule matching, JSON encoding, the proc scan) has a performance budget in `bench/budget.json`. `make bench` runs the benchmarks and checks it. On a pull request CI also runs them against the base branch on arm64 and fails on a hot path regression over 20%. If your change needs more time or allocations, update the budget in the same PR and say why; [bench/README.md](bench/README.md) has the details.
+
 ## Alert rules
 
 Edit `deploy/prometheus/pisentry-rules.yaml`, copy its `groups:` into the `spec:` of `deploy/kubernetes/apps/base/pisentry/prometheusrule.yaml` indented two spaces (`go test ./internal/metrics` fails if they drift or reference a metric that does not exist), and add a case to `pisentry-rules.test.yaml`. Check with:

@@ -2,7 +2,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 IMAGE   ?= ghcr.io/pisentry/pisentry
 
-.PHONY: all test vet build dist image sim demo fuzz clean
+.PHONY: all test vet build dist image sim demo fuzz bench clean
 
 all: vet test build
 
@@ -29,7 +29,7 @@ image:
 		--build-arg VERSION=$(VERSION) -t $(IMAGE):$(VERSION) --push .
 
 clean:
-	rm -rf dist pisentry
+	rm -rf dist pisentry bench.txt
 
 # Container-based attack simulation. Builds the binary in the pinned Go image,
 # then fires harmless stand-ins for eight detectors inside a python:3-slim
@@ -60,6 +60,14 @@ fuzz:
 		echo "== $$fn ($$pkg, $(FUZZTIME))"; \
 		go test -run '^$$' -fuzz "^$$fn\$$" -fuzztime $(FUZZTIME) ./$$pkg || exit 1; \
 	done
+
+# Event path benchmarks (#33): 10 runs each, then the budget check in
+# bench/budget.json. CI runs the same on arm64 and also compares with the
+# base branch. See bench/README.md.
+BENCH_PKGS := ./internal/engine ./internal/rules ./internal/detect
+bench:
+	go test -run '^$$' -bench . -benchmem -count 10 $(BENCH_PKGS) > bench.txt
+	go run ./bench/benchgate -head bench.txt
 
 # README recordings. Drives a real shell in a throwaway container, records it
 # as asciicast and renders GIFs into docs/assets/. Needs Docker, tmux, ffmpeg

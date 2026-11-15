@@ -12,6 +12,7 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 - The release workflow signs `deploy/rules/packs` as a bundle in a `rules-signing` environment with a required reviewer and attaches it to the release. `cmd/pisentry-bundle` makes keys and signs bundles; it is not shipped
 - Five rule packs, embedded in the binary and on by default, add 70 built-in rules: `reverse-shells` (21), `privesc-gtfobins` (20), `persistence-linux` (14), `iot-botnets` (8) and `defense-evasion` (7). That brings the built-in total to 80. Every rule has a MITRE technique and positive and negative fixtures. `pisentry check` lists the packs (#15)
 - `rules.disabled_packs` turns off built-in packs by name. An unknown name stops the agent from starting, and a `rules.d` rule that reuses the ID of a rule in a disabled pack is rejected (#15)
+- Benchmarks and a performance budget for the event path: sanitizer, rule matching at 75, 500 and 1,000 rules, JSON encoding, emit and a proc scan over a fixture `/proc`. CI runs them on the native arm64 runner, compares pull requests with the base branch using benchstat, fails on a hot path regression over 20% or a broken budget, and posts the results as the job summary. The budget lives in `bench/budget.json`; see `bench/README.md` (#33)
 
 ### Changed
 
