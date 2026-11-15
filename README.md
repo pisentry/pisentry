@@ -30,7 +30,7 @@
 <p align="center"><sub>A real recording, not a mock-up: the top pane fires harmless stand-ins for eight attacks, the bottom pane is <code>pisentry run</code> piped through <a href="scripts/demo/stream.jq">jq</a>, and the last frame is <code>pisentry report</code>. Rebuild it with <code>make demo</code> (<a href="scripts/demo/">how</a>).</sub></p>
 
 - Standard library only. No third-party Go modules, nothing to audit but this repo and the Go toolchain
-- A 7–8 MiB binary that uses 10–30 MiB of memory and under 1% CPU on a 2 GB Pi
+- A 7-8 MiB binary that uses 10-30 MiB of memory and under 1% CPU on a 2 GB Pi
 - arm64 (Pi 4 and 5), armv7 (32-bit Pi OS), amd64
 - Runs as a hardened systemd service or as a Kubernetes DaemonSet managed by Flux
 - Raspberry Pi OS, Ubuntu, Debian and RHEL-family hosts, with journald or classic syslog files
