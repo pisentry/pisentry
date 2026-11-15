@@ -4,3 +4,11 @@ dist/
 /_site/
 __pycache__/
 /bench.txt
+
+# panel: the built UI is embedded at build time, not committed
+!/panel/internal/web/dist/
+/panel/internal/web/dist/*
+!/panel/internal/web/dist/.gitkeep
+/panel/web/node_modules/
+/panel/pisentry-panel
+/panel/data/

@@ -1,0 +1,46 @@
+[Unit]
+Description=pisentry fleet panel
+Documentation=https://github.com/pisentry/pisentry/tree/main/panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Loopback by default. To take agents from other Pis, add -listen :8443 with
+# -tls-cert and -tls-key, or put a TLS reverse proxy in front.
+ExecStart=/usr/local/bin/pisentry-panel serve -data /var/lib/pisentry-panel -listen 127.0.0.1:8443
+Restart=always
+RestartSec=5
+
+# The panel never needs root. Run the CLI as this user too:
+#   sudo -u pisentry-panel pisentry-panel host add -data /var/lib/pisentry-panel NAME
+User=pisentry-panel
+Group=pisentry-panel
+StateDirectory=pisentry-panel
+StateDirectoryMode=0700
+
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

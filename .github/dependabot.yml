@@ -17,9 +17,30 @@ updates:
 
   # Base images in the Dockerfiles are pinned by digest.
   - package-ecosystem: docker
-    directories: [/, /scripts/demo]
+    directories: [/, /scripts/demo, /panel]
     schedule:
       interval: weekly
     cooldown:
       default-days: 7
     labels: [ci]
+
+  # The panel's Go module and web UI. The agent module has no dependencies.
+  - package-ecosystem: gomod
+    directory: /panel
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      panel-go:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /panel/web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      panel-ui:
+        patterns: ["*"]

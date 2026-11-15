@@ -6,6 +6,7 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ### Added
 
+- The first piece of the fleet panel, in `panel/` as its own Go module (ADR 0002, #77): `pisentry-panel` takes Event Schema v1 events from agents with a per-host token, stores them in SQLite, and shows hosts, quiet hosts, the fleet Top 10 and events in a web UI built into the binary. The agent can't send to it yet (#76)
 - Signed rule updates with `pisentry update-patterns` (#14): downloads a rule bundle over HTTPS (default: the latest GitHub release) and installs it into `rules.d` only after the Ed25519 signature verifies with a key embedded in the binary, every file matches its SHA-256, the version is higher than the installed one and the manifest has not expired. Files are written atomically and a running agent gets SIGHUP. An unsigned bundle, an unknown key, a tampered file, an older version or an expired manifest exits 1 and changes nothing. Two key slots (current and next) let the signing key rotate without a breaking release
 - The agent verifies a signed bundle in `rules.d` on every load, so a hand-edited or half-synced ConfigMap is rejected like a broken rule file. In Kubernetes, deliver bundles through GitOps; `docs/rule-schema.md` has the steps. `pisentry check` applies the same checks to a bundle
 - New metric `pisentry_rules_bundle_version`: the version of the signed bundle in the active rule set, 0 when none is installed
