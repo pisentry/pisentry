@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "bash",
+    "exe": "/usr/bin/bash",
+    "cmdline": "bash -i",
+    "uid": 33
+  },
+  "parent_comm": "lighttpd"
+}

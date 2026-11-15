@@ -1,6 +1,6 @@
 # Rule Schema v1
 
-Detection rules are strict JSON bundles. The built-in bundle is [`deploy/rules/default.json`](../deploy/rules/default.json), embedded in the binary. Operators add or override rules with more bundles in `rules.dir` (default `/etc/pisentry/rules.d`, env `PISENTRY_RULES_DIR`).
+Detection rules are strict JSON bundles. The built-in rules are [`deploy/rules/default.json`](../deploy/rules/default.json) plus the [rule packs](#rule-packs) in [`deploy/rules/packs/`](../deploy/rules/packs/), all embedded in the binary. Operators add or override rules with more bundles in `rules.dir` (default `/etc/pisentry/rules.d`, env `PISENTRY_RULES_DIR`).
 
 The agent runs as root and parses these files, so the loader is attack surface. It is `encoding/json` with unknown fields rejected, hard size limits, and RE2 regexes compiled at load time. There is no YAML parser in the agent.
 
@@ -80,7 +80,7 @@ A rule may only use the fields and exception keys its source fills. Anything els
 | `process` | The process scan | `process.pid`, `process.ppid`, `process.uid`, `process.comm`, `process.exe`, `process.cmdline`, `process.parent_comm` | `exe`, `exe_prefix`, `comm`, `parent_comm`, `uids`, `cmdline_contains` |
 | `log` | sudo commands in the auth log | `log.ident` (always `sudo`), `log.msg`, `user.name`, `process.cmdline` (the command) | `users`, `cmdline_contains` |
 
-Field names are [Event Schema v1](event-schema.md) names. `process.uid` and `process.parent_comm` cost extra `/proc` reads, which only happen for every process when some rule matches on them; otherwise they are read after a match, which is enough for exceptions.
+Field names are [Event Schema v1](event-schema.md) names. `process.uid` and `process.parent_comm` cost extra `/proc` reads, so the scan reads them only for candidates: a process is checked first with conditions on those two fields counted as met, and only if some rule could still match are they read and the rules run for real. A rule that matches `process.parent_comm` alone would make every process a candidate, so pair it with a cheap condition such as `process.comm`.
 
 `container_image`, `cidrs` and `paths` exceptions, and fields such as `source.ip`, `file.path` or `container.image`, will be accepted once a detector feeds network, file or k3s rules.
 
@@ -89,6 +89,38 @@ Field names are [Event Schema v1](event-schema.md) names. `process.uid` and `pro
 An exception suppresses a match when every non-empty key in it matches. Several exceptions on a rule are ORed. An empty exception is rejected because it would silence the rule.
 
 To add an exception to a built-in rule, copy the rule into `rules.d` with the same `id` and add `exceptions`. A rule in `rules.d` with a built-in `id` replaces the built-in rule. Two files in `rules.d` defining the same `id` is an error.
+
+## Rule packs
+
+Curated rules ship as packs next to `default.json`, embedded in the binary and on by default:
+
+| Pack | Rules | Covers |
+|---|---|---|
+| `reverse-shells` | 21 | `/dev/tcp`, netcat `-e`, mkfifo relays, socat exec, Python, Perl, PHP, Ruby, Lua, awk, Node and openssl shells, TTY upgrades, shells under a web server, and outbound tunnels (`ssh -R`, chisel, gsocket, ngrok, frp). PS08 |
+| `privesc-gtfobins` | 20 | sudo escapes through find, vim, tar, env, capsh, awk, interpreters, zip, rsync, ssh, apt, nmap, gdb, script and wrapper programs; containers with the host root mounted; root shells escaped from a pager; `sh -p` from a setuid parent. PS04 |
+| `persistence-linux` | 14 | sudo writes to authorized_keys, PAM modules and stacks, systemd generators and units in temp directories, timers, cron download-and-run, shell profiles, udev `RUN+=`, `insmod` from temp directories, NOPASSWD sudoers, service accounts given a shell, rc.local and motd scripts. PS05 |
+| `iot-botnets` | 8 | Mirai and Gafgyt dropper chains, busybox tftp and ftpget, architecture-named binaries and deleted or hidden binaries in temp directories, known family names, busybox probe words. PS06, since the Top 10 has no separate malware category yet |
+| `defense-evasion` | 7 | Firewall flushes, stopped security agents (pisentry included), wiped auth logs and journals, erased shell history, timestomping, AppArmor or SELinux off, ASLR and ptrace protections off. PS03 and PS10 |
+
+`pisentry check` lists the packs and whether each is on. To turn one off:
+
+```json
+{ "rules": { "disabled_packs": ["iot-botnets"] } }
+```
+
+An unknown pack name is an error. To change one rule instead, copy it into `rules.d` with the same `id`, the same as for `default.json` rules. Packs hold rules only; catalog lists stay in `default.json`.
+
+What the packs cannot see: pisentry reads the process table every 15 seconds and sudo commands from the auth log. A process that exits between scans, keystrokes inside an interactive program (a `!sh` typed in `less` is only seen through the shell it starts), and file changes without a sudo command (FIM covers those) are outside what these rules match. New rules start as `"status": "test"` and move to `stable` after a day on real hosts with no High or Critical false positives.
+
+### SigmaHQ
+
+SigmaHQ's `rules/linux/process_creation` was evaluated as a source for packs and not imported for now:
+
+- They are written for a feed of every process start (auditd, Sysmon for Linux or eBPF). Many match short commands such as discovery tools or one-shot downloads, which a 15-second snapshot rarely catches, so they would load and seldom fire. Fields such as `ParentImage` beyond the parent's name and `CurrentDirectory` have no equivalent yet.
+- They are YAML, and the agent has no YAML parser on purpose. Import would be an offline converter that writes Rule Schema v1 JSON, kept out of the agent.
+- They are under the Detection Rule License 1.1: a converted rule must keep `author`, link the source in `references`, and name the author in the alerts it produces. Event Schema v1 carries `rule.id` and `rule.title` but not an author yet.
+
+Revisit once real-time exec events (#16) give every process start.
 
 ## Validating
 

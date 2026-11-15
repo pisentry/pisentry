@@ -1,0 +1,11 @@
+{
+  "source": "log",
+  "log_ident": "sudo",
+  "log_msg": "    pi : TTY=pts/0 ; PWD=/home/pi ; USER=root ; COMMAND=/usr/bin/rsync -e sh -c \"sh 0<&2 1>&2\" 127.0.0.1:/dev/null",
+  "user": {
+    "name": "pi"
+  },
+  "process": {
+    "cmdline": "/usr/bin/rsync -e sh -c \"sh 0<&2 1>&2\" 127.0.0.1:/dev/null"
+  }
+}

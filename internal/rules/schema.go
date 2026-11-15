@@ -441,6 +441,48 @@ func (e *Engine) UsesField(src Source, field string) bool {
 	return false
 }
 
+// MayMatch reports whether some rule for in.Source could match in once the
+// deferred fields are filled in. A condition on a deferred field counts as
+// met and exceptions are skipped, so false is exact and true means "read the
+// deferred fields, then call Eval". The process scan uses it to read the uid
+// and parent comm only for processes that are already candidates.
+func (e *Engine) MayMatch(in *EvalInput, deferred ...string) bool {
+	if e == nil {
+		return false
+	}
+	candidates := e.rules
+	if in.Source != "" {
+		candidates = e.bySrc[in.Source]
+	}
+	for _, cr := range candidates {
+		if cr.mayMatch(in, deferred) {
+			return true
+		}
+	}
+	return false
+}
+
+func (cr *CompiledRule) mayMatch(in *EvalInput, deferred []string) bool {
+	if in.Source != "" && cr.Rule.Source != in.Source {
+		return false
+	}
+	met := func(c compiledCondition) bool { return slices.Contains(deferred, c.field) || c.eval(in) }
+	for _, c := range cr.all {
+		if !met(c) {
+			return false
+		}
+	}
+	if len(cr.any) == 0 {
+		return true
+	}
+	for _, c := range cr.any {
+		if met(c) {
+			return true
+		}
+	}
+	return false
+}
+
 // Eval returns every rule for in.Source that matches in.
 func (e *Engine) Eval(in *EvalInput) []Rule {
 	if e == nil {

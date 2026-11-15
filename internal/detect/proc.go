@@ -115,7 +115,6 @@ func (p *ProcWatch) Scan() error {
 		return err
 	}
 	rs := p.d.rules()
-	eager := rs.UsesField(rules.SourceProcess, "process.uid") || rs.UsesField(rules.SourceProcess, "process.parent_comm")
 	shells := cfg.Proc.ShellNames
 	if len(shells) == 0 {
 		shells = rs.Catalog().ShellNames
@@ -153,7 +152,7 @@ func (p *ProcWatch) Scan() error {
 		// defaults, other categories come from rule packs and rules.d.
 		// proc.miner_names in the config is still honoured as an extra list.
 		minerHit := false
-		for _, hit := range p.matchProcessRules(rs, eager, pid, st, exe, cmd) {
+		for _, hit := range p.matchProcessRules(rs, pid, st, exe, cmd) {
 			if hit.Category == event.Cryptominer {
 				p.emitMiner(id, hit.Level, pid, st, exe, cmd, cpu, hit.Title, &hit)
 				minerHit = true
@@ -200,15 +199,15 @@ func (p *ProcWatch) Scan() error {
 }
 
 // matchProcessRules evaluates the process rules for one process and returns
-// every hit. The parent comm and uid cost extra /proc reads. When no rule
-// matches on them (eager false) they are only filled in, and the rules
-// re-evaluated, once something has matched, which is enough for exceptions.
-func (p *ProcWatch) matchProcessRules(rs *rules.Engine, eager bool, pid int, st procfs.Proc, exe, cmd string) []rules.Rule {
+// every hit. The parent comm and uid cost extra /proc reads, so they are only
+// read once the cheap fields show some rule could match. Conditions on them
+// count as met for that first pass (MayMatch), then the rules run for real.
+func (p *ProcWatch) matchProcessRules(rs *rules.Engine, pid int, st procfs.Proc, exe, cmd string) []rules.Rule {
 	in := &rules.EvalInput{
 		Source:  rules.SourceProcess,
 		Process: event.ProcessEntity{PID: pid, PPID: st.PPID, Comm: st.Comm, Exe: exe, Cmdline: cmd},
 	}
-	if !eager && len(rs.Eval(in)) == 0 {
+	if !rs.MayMatch(in, "process.uid", "process.parent_comm") {
 		return nil
 	}
 	if uid := procfs.UID(p.d.Cfg.ProcRoot, pid); uid >= 0 {

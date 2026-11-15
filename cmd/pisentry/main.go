@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -150,7 +151,7 @@ func cmdRun(args []string) error {
 		log.Info("alerts enabled", "type", cfg.Alerts.Type, "min_severity", cfg.Alerts.MinSeverity.String())
 	}
 
-	live := rules.NewLive(cfg.Rules.Dir, loadRules(cfg, log))
+	live := rules.NewLive(cfg.Rules.Dir, cfg.Rules.DisabledPacks, loadRules(cfg, log))
 	m.RulesLoaded.Set(float64(len(live.Get().Rules())))
 	m.RulesLastReload.Set(float64(time.Now().Unix()))
 	m.RulesReloadFails.Add(0)
@@ -329,10 +330,13 @@ func cmdAudit(args []string) (int, error) {
 // logs loudly and runs on the built-in rules. `pisentry check` catches the
 // same error before a restart.
 func loadRules(cfg *config.Config, log *slog.Logger) *rules.Engine {
-	re, err := rules.LoadOrDefault(cfg.Rules.Dir)
+	re, err := rules.LoadOrDefault(cfg.Rules.Dir, cfg.Rules.DisabledPacks)
 	if err != nil {
 		log.Error("rules.d rejected; running on built-in rules only", "dir", cfg.Rules.Dir, "err", err)
-		re = rules.Default()
+		if re, err = rules.Base(cfg.Rules.DisabledPacks); err != nil {
+			log.Error("rules.disabled_packs rejected; running with every pack", "err", err)
+			re = rules.Default()
+		}
 	}
 	log.Info("rules loaded", "rules", len(re.Rules()), "dir", cfg.Rules.Dir)
 	return re
@@ -385,10 +389,23 @@ func cmdCheck(args []string) error {
 		fmt.Printf("ok: %s, %d rules\n", *dir, len(re.Rules()))
 		return nil
 	}
-	re, err := rules.LoadOrDefault(cfg.Rules.Dir)
+	re, err := rules.LoadOrDefault(cfg.Rules.Dir, cfg.Rules.DisabledPacks)
 	if err != nil {
 		return err
 	}
+	off := map[string]bool{}
+	for _, p := range cfg.Rules.DisabledPacks {
+		off[p] = true
+	}
+	var packs []string
+	for _, p := range rules.Packs() {
+		state := "on"
+		if off[p.Name] {
+			state = "off"
+		}
+		packs = append(packs, fmt.Sprintf("%s (%d rules, %s)", p.Name, len(p.Rules), state))
+	}
+	fmt.Printf("packs: %s\n", strings.Join(packs, ", "))
 	fmt.Printf("ok: built-in rules plus %s, %d rules\n", cfg.Rules.Dir, len(re.Rules()))
 	return nil
 }

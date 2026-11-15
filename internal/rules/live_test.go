@@ -31,11 +31,11 @@ func evilRule(id string) map[string]any {
 
 func newLive(t *testing.T, dir string) *Live {
 	t.Helper()
-	eng, err := LoadOrDefault(dir)
+	eng, err := LoadOrDefault(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewLive(dir, eng)
+	return NewLive(dir, nil, eng)
 }
 
 func TestLiveReloadSwapsOnSuccess(t *testing.T) {
@@ -84,11 +84,11 @@ func TestLiveReloadKeepsPreviousOnError(t *testing.T) {
 func TestLiveStartsFromDefaultWhenDirBroken(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "bad.json", []byte(`not json`))
-	if _, err := LoadOrDefault(dir); err == nil {
+	if _, err := LoadOrDefault(dir, nil); err == nil {
 		t.Fatal("want error")
 	}
 	// cmd/pisentry falls back to Default() exactly like this.
-	l := NewLive(dir, Default())
+	l := NewLive(dir, nil, Default())
 	if _, err := l.Reload(); err == nil {
 		t.Fatal("want error on reload of a still-broken dir")
 	}

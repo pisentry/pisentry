@@ -1,0 +1,11 @@
+{
+  "source": "log",
+  "log_ident": "sudo",
+  "log_msg": "    pi : TTY=pts/0 ; PWD=/home/pi ; USER=root ; COMMAND=/usr/bin/nmap -sn 192.168.1.0/24",
+  "user": {
+    "name": "pi"
+  },
+  "process": {
+    "cmdline": "/usr/bin/nmap -sn 192.168.1.0/24"
+  }
+}

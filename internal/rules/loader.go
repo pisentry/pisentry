@@ -24,14 +24,11 @@ var (
 	defaultEng  *Engine
 )
 
-// Default returns the compiled built-in rule and catalog engine from default.json.
+// Default returns the compiled built-in rules and catalog: default.json plus
+// every embedded rule pack.
 func Default() *Engine {
 	defaultOnce.Do(func() {
-		eng, err := NewEngineFromBytes("embedded/default.json", defaultBundleJSON)
-		if err != nil {
-			panic("invalid embedded default.json: " + err.Error())
-		}
-		defaultEng = eng
+		defaultEng = buildBase(nil)
 	})
 	return defaultEng
 }
@@ -279,14 +276,18 @@ func ValidatePath(path string) (*Engine, error) {
 	return eng, nil
 }
 
-// LoadOrDefault starts with the embedded Default() rules and catalog, then
-// overlays any *.json files found in dir (if dir exists and is non-empty).
+// LoadOrDefault starts with the built-in rules and catalog (default.json and
+// every embedded pack not named in disabledPacks), then overlays any *.json
+// files found in dir (if dir exists and is non-empty).
 // Duplicate rule IDs across files inside dir are rejected; a rule in dir with
 // the same ID as an embedded default rule replaces the embedded rule, which is
 // how a user adds exceptions to a built-in rule. A catalog list in dir
 // replaces the built-in list of the same name.
-func LoadOrDefault(dir string) (*Engine, error) {
-	base := Default()
+func LoadOrDefault(dir string, disabledPacks []string) (*Engine, error) {
+	base, err := Base(disabledPacks)
+	if err != nil {
+		return nil, err
+	}
 	if dir == "" {
 		return base, nil
 	}

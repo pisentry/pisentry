@@ -1,0 +1,713 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "id": "PS04-GTFO-SUDO-FIND-EXEC-SHELL",
+      "title": "Sudo find executing a bare shell",
+      "status": "test",
+      "description": "find -exec straight into a shell with no script, the GTFOBins escape from a sudo rule that allows find.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bfind\\b.*\\s-exec(?:dir)?\\s+(?:\\S*/)?(?:ba|da|z|k)?sh(?:\\s+-p)?\\s+(?:;|\\+)"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/find/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-VIM-SHELL",
+      "title": "Sudo vim running a shell or interpreter",
+      "status": "test",
+      "description": "vim started with -c :! or :py/:lua, which runs commands as root before the editor opens.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:vim?|nvim|vim\\.basic|vim\\.tiny|rvim|view)\\b.*\\s(?:-c|\\+)\\s*:?\\s*(?:!|(?:py3?|python3?|lua|perl|ruby)\\s)"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/vim/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-TAR-CHECKPOINT",
+      "title": "Sudo tar with a checkpoint exec action",
+      "status": "test",
+      "description": "tar --checkpoint-action=exec runs an arbitrary command as root.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "--checkpoint-action\\s*=?\\s*exec"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/tar/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-ENV-SHELL",
+      "title": "Sudo env launching a bare shell",
+      "status": "test",
+      "description": "env followed by nothing but a shell, the GTFOBins escape from a sudo rule that allows env.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "^(?:\\S*/)?env\\s+(?:-\\S+\\s+|\\w+=\\S*\\s+)*(?:\\S*/)?(?:ba|da|z|k)?sh(?:\\s+-p)?\\s*$"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/env/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-CAPSH",
+      "title": "Sudo capsh dropping to a shell",
+      "status": "test",
+      "description": "capsh -- starts a root shell, optionally after setting uid and gid.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:^|/)capsh(?:\\s+\\S+)*\\s+--(?:\\s|$)"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/capsh/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-AWK-SYSTEM",
+      "title": "Sudo awk calling system() on a shell",
+      "status": "test",
+      "description": "awk BEGIN {system(\"/bin/sh\")} under sudo.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:g|m|n)?awk\\b.*\\bsystem\\s*\\(\\s*[\\\"']?(?:\\S*/)?(?:ba|da|z|k)?sh\\b"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/awk/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-INTERPRETER-SHELL",
+      "title": "Sudo interpreter one-liner spawning a shell",
+      "status": "test",
+      "description": "python, perl, ruby, lua, php or node -c/-e code that execs a shell as root.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:python[0-9.]*|perl|ruby|lua[0-9.]*|php[0-9.]*|node)\\s+-[cer]\\s.*(?:os\\.system|os\\.exec\\w*|pty\\.spawn|subprocess\\.\\w+|\\bexec\\s*\\(?|\\bsystem\\s*\\(|spawn\\s*\\()[^)]*[\\\"']?/bin/(?:ba|da|z)?sh"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/python/",
+        "https://gtfobins.github.io/gtfobins/perl/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-ZIP-TT",
+      "title": "Sudo zip with a custom test command",
+      "status": "test",
+      "description": "zip -T -TT runs the given command as root to \"test\" the archive.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\s-TT\\s|--unzip-command"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/zip/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-RSYNC-SHELL",
+      "title": "Sudo rsync with a shell as its remote command",
+      "status": "test",
+      "description": "rsync -e 'sh -c ...' runs a root shell instead of ssh.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\brsync\\b.*\\s-e\\s+[\\\"']?(?:\\S*/)?(?:ba|da|z|k)?sh\\s+-c"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/rsync/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-SSH-PROXYCOMMAND",
+      "title": "Sudo ssh with a shell as ProxyCommand",
+      "status": "test",
+      "description": "ssh -o ProxyCommand=';sh ...' runs a root shell before any connection.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "ProxyCommand\\s*=\\s*[\\\"']?;?\\s*(?:\\S*/)?(?:ba|da|z|k)?sh\\b"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/ssh/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-APT-INVOKE-HOOK",
+      "title": "Sudo apt with a Pre- or Post-Invoke hook on the command line",
+      "status": "test",
+      "description": "apt-get update -o APT::Update::Pre-Invoke::=/bin/sh runs the hook as root.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:Pre|Post)-Invoke(?:-Success)?::="
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/apt-get/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-DOCKER-HOST-ROOT",
+      "title": "Sudo container run with the host root mounted",
+      "status": "test",
+      "description": "An interactive container with / bind-mounted, the standard way to become root on the host through a container runtime.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1611",
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:docker|podman|nerdctl)\\s+(?:container\\s+)?run\\b.*(?:-v\\s*|--volume[= ])/:/"
+            ]
+          }
+        ],
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bchroot\\b",
+              "\\s-[a-zA-Z]*(?:it|ti)[a-zA-Z]*\\b",
+              "--interactive\\b"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "Monitoring agents run detached (-d) are not matched."
+      ]
+    },
+    {
+      "id": "PS04-GTFO-DOCKER-HOST-ROOT",
+      "title": "Container client running with the host root mounted",
+      "status": "test",
+      "description": "A docker, podman or nerdctl client running an interactive container with / bind-mounted. A member of the docker group can do this without sudo.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1611"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "equals": [
+              "docker",
+              "podman",
+              "nerdctl"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:docker|podman|nerdctl)\\s+(?:container\\s+)?run\\b.*(?:-v\\s*|--volume[= ])/:/"
+            ]
+          }
+        ],
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bchroot\\b",
+              "\\s-[a-zA-Z]*(?:it|ti)[a-zA-Z]*\\b",
+              "--interactive\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS04-GTFO-SUDO-NMAP-SCRIPT",
+      "title": "Sudo nmap running a script from a writable directory",
+      "status": "test",
+      "description": "nmap --script pointing at a file in /tmp or a home directory runs Lua as root; --interactive gives a shell on old nmap.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bnmap\\b.*--script[= ]/(?:tmp|var/tmp|dev/shm|home|root)/",
+              "\\bnmap\\b.*--interactive\\b"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/nmap/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-ROOT-SHELL-FROM-PAGER",
+      "title": "Root shell escaped from a pager or editor",
+      "status": "test",
+      "description": "A bare root shell whose parent is less, more, man, vi or a similar program, the footprint of a !sh escape from a sudo rule that allows the program.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003",
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.uid",
+            "equals": [
+              "0"
+            ]
+          },
+          {
+            "field": "process.comm",
+            "equals": [
+              "sh",
+              "bash",
+              "dash",
+              "zsh",
+              "ash",
+              "ksh"
+            ]
+          },
+          {
+            "field": "process.parent_comm",
+            "equals": [
+              "less",
+              "more",
+              "man",
+              "vi",
+              "vim",
+              "vim.basic",
+              "vim.tiny",
+              "nvim",
+              "view",
+              "rvim",
+              "nano",
+              "pico",
+              "ed",
+              "ftp",
+              "gdb",
+              "mysql",
+              "psql"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "^(?:\\S*/)?(?:ba|da|z|k)?sh(?:\\s+-[il])?\\s*$",
+              "^(?:\\S*/)?(?:ba|da|z|k)?sh\\s+-c\\s+(?:\\S*/)?(?:ba|da|z|k)?sh(?:\\s+-[ip])?\\s*$"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "An admin deliberately shelling out of sudo vim."
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SHELL-PRIVILEGED-FLAG",
+      "title": "Shell started with -p by a non-root user",
+      "status": "test",
+      "description": "sh -p or bash -p keeps the effective uid of a setuid parent, the last step of most SUID GTFOBins escapes.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.001"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "equals": [
+              "sh",
+              "bash",
+              "dash",
+              "zsh",
+              "ash",
+              "ksh"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "^(?:\\S*/)?(?:ba|da|z|k)?sh\\s+(?:-\\S*\\s+)*-[a-zA-Z]*p\\b"
+            ]
+          }
+        ]
+      },
+      "exceptions": [
+        {
+          "uids": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-INSTALL-SETUID",
+      "title": "Sudo install with a setuid or setgid mode",
+      "status": "test",
+      "description": "install -m 4755 (or 2xxx, 6xxx) creates a setuid binary in one step.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.001",
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:^|/)install\\s(?:.*\\s)?-m\\s*0?[2467][0-7]{3}\\b",
+              "(?:^|/)install\\s(?:.*\\s)?-m\\s*\\S*[ug][+=]s"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS04-GTFO-SUDO-SCRIPT-SHELL",
+      "title": "Sudo script(1) starting a shell",
+      "status": "test",
+      "description": "script -q /dev/null or script -c sh starts an interactive root shell.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "medium",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:^|/)script\\s+(?:-\\S+\\s+)*/dev/null\\s*$",
+              "(?:^|/)script\\s+(?:-\\S+\\s+)*-c\\s+(?:\\S*/)?(?:ba|da|z|k)?sh\\s+/dev/null"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/script/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-GDB-SHELL",
+      "title": "Sudo gdb running a shell command",
+      "status": "test",
+      "description": "gdb -ex '!sh' or -ex 'python ...' runs code as root.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bgdb\\b.*-ex\\s+[\\\"']?(?:!|shell\\s|python\\s|py\\s)"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/gdb/"
+      ]
+    },
+    {
+      "id": "PS04-GTFO-SUDO-WRAPPER-SHELL",
+      "title": "Sudo wrapper program launching a bare shell",
+      "status": "test",
+      "description": "strace, timeout, nice, stdbuf, taskset, setarch, flock, unshare, nsenter, busybox, xargs and similar wrappers started with nothing but a shell, the GTFOBins escape from a sudo rule that allows the wrapper.",
+      "author": "pisentry",
+      "category": "PS04",
+      "level": "high",
+      "mitre": [
+        "T1548.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:strace|ltrace|timeout|nice|ionice|stdbuf|taskset|chrt|setarch|flock|xargs|busybox|unshare|nsenter|start-stop-daemon|cpulimit|runcon|valgrind)\\b(?:\\s+\\S+)*\\s+(?:\\S*/)?(?:ba|da|z|k)?sh(?:\\s+-[ip])?\\s*$"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "https://gtfobins.github.io/gtfobins/strace/",
+        "https://gtfobins.github.io/gtfobins/timeout/",
+        "https://gtfobins.github.io/gtfobins/busybox/"
+      ]
+    }
+  ]
+}

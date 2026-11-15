@@ -1,0 +1,11 @@
+{
+  "source": "log",
+  "log_ident": "sudo",
+  "log_msg": "    pi : TTY=pts/0 ; PWD=/home/pi ; USER=root ; COMMAND=/usr/bin/ssh root@10.0.0.6",
+  "user": {
+    "name": "pi"
+  },
+  "process": {
+    "cmdline": "/usr/bin/ssh root@10.0.0.6"
+  }
+}

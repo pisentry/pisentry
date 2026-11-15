@@ -1,0 +1,690 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "id": "PS08-RS-DEVTCP-INTERACTIVE",
+      "title": "Interactive shell redirected to /dev/tcp",
+      "status": "test",
+      "description": "A shell whose command line sends an interactive shell over bash's /dev/tcp or /dev/udp pseudo-device, the classic bash reverse shell.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "/dev/(?:tcp|udp)/"
+            ]
+          }
+        ],
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:ba|da|z|k)?sh\\s+-i\\b",
+              "0>&1",
+              ">&\\s*/dev/(?:tcp|udp)/"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "None known. Health checks that write to /dev/tcp do not use -i or 0>&1."
+      ]
+    },
+    {
+      "id": "PS08-RS-DEVTCP-FD-LOOP",
+      "title": "Shell command loop over a /dev/tcp file descriptor",
+      "status": "test",
+      "description": "A shell that opens a read-write /dev/tcp descriptor and runs what it reads from it.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "high",
+      "mitre": [
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "exec\\s+\\d+<>\\s*/dev/(?:tcp|udp)/"
+            ]
+          }
+        ],
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "while\\s+read\\b",
+              "<&\\d+\\s*\\|",
+              "\\$line\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-NETCAT-EXEC",
+      "title": "Netcat executing a program on connect",
+      "status": "test",
+      "description": "nc, ncat or busybox nc with -e, -c or --exec, which hands a program (usually a shell) to the network peer.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:^|[\\s/])(?:nc|ncat|netcat|nc\\.traditional)\\s(?:.*\\s)?-[a-zA-Z]*[ec]\\s+\\S",
+              "(?:^|[\\s/])ncat\\s(?:.*\\s)?--(?:sh-)?exec\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-MKFIFO-NC",
+      "title": "Named pipe shell relayed through netcat or telnet",
+      "status": "test",
+      "description": "The mkfifo reverse shell: a named pipe piped into a shell whose output goes back through nc or telnet.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "contains": [
+              "mkfifo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\|\\s*(?:\\S*/)?(?:ba|da|z|k)?sh\\b"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:nc|ncat|netcat|telnet)\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-SOCAT-EXEC",
+      "title": "socat connecting a network stream to a program",
+      "status": "test",
+      "description": "socat joining a TCP, UDP or TLS stream to exec: or system:, which gives the peer a shell.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bsocat\\b.*\\b(?:exec|system):"
+            ],
+            "case_insensitive": true
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:tcp|tcp4|tcp6|udp|openssl|ssl)[-:]"
+            ],
+            "case_insensitive": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-PYTHON-SOCKET",
+      "title": "Python one-liner wiring a socket to a shell",
+      "status": "test",
+      "description": "python -c that opens a socket and duplicates it onto a shell or pty.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059.006"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "startswith": [
+              "python"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "import\\s+[^;]*\\bsocket\\b|socket\\.socket\\("
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "os\\.dup2\\(|pty\\.spawn\\(|subprocess\\.(?:call|Popen|run)\\("
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-PERL-SOCKET",
+      "title": "Perl one-liner wiring a socket to a shell",
+      "status": "test",
+      "description": "perl -e that connects a socket and reopens STDIN/STDOUT on it or execs a shell.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "startswith": [
+              "perl"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bSocket\\b|IO::Socket"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "exec\\s*\\(?\\s*[\\\"']?/bin/(?:ba|da)?sh|open\\s*\\(\\s*STD(?:IN|OUT|ERR)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-PHP-FSOCKOPEN",
+      "title": "PHP one-liner wiring fsockopen to a shell",
+      "status": "test",
+      "description": "php -r that opens a socket with fsockopen and runs a shell on it.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "startswith": [
+              "php"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bfsockopen\\s*\\("
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:exec|shell_exec|system|passthru|popen|proc_open)\\s*\\(|/bin/(?:ba|da)?sh"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-RUBY-SOCKET",
+      "title": "Ruby one-liner wiring a TCP socket to commands",
+      "status": "test",
+      "description": "ruby -rsocket or TCPSocket one-liner that runs what the peer sends.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "startswith": [
+              "ruby"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "-rsocket|TCPSocket"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bexec\\b|\\bspawn\\b|IO\\.popen|/bin/(?:ba|da)?sh"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-LUA-SOCKET",
+      "title": "Lua one-liner wiring a socket to a shell",
+      "status": "test",
+      "description": "lua -e that loads LuaSocket and runs a shell with os.execute or io.popen.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "high",
+      "mitre": [
+        "T1059"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "startswith": [
+              "lua"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "require\\s*\\(?\\s*[\\\"']socket[\\\"']"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "os\\.execute|io\\.popen|/bin/(?:ba|da)?sh"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-AWK-INET",
+      "title": "awk using a /inet network socket",
+      "status": "test",
+      "description": "gawk's /inet/tcp special file gives awk a socket; in practice it is only used for awk reverse shells.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "/inet/(?:tcp|udp)/"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-OPENSSL-SHELL",
+      "title": "Shell relayed through openssl s_client",
+      "status": "test",
+      "description": "An interactive shell whose input and output run through openssl s_client, an encrypted reverse shell.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059.004",
+        "T1573.002"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "openssl\\s+s_client\\b"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:ba|da|z)?sh\\s+-i\\b|\\|\\s*(?:\\S*/)?(?:ba|da|z|k)?sh\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-NODE-SOCKET",
+      "title": "Node.js one-liner wiring a socket to a shell",
+      "status": "test",
+      "description": "node -e that spawns a shell with child_process and pipes it to a net.Socket.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "critical",
+      "mitre": [
+        "T1059.007"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "startswith": [
+              "node"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "require\\(\\s*[\\\"']child_process[\\\"']\\s*\\)"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "require\\(\\s*[\\\"']net[\\\"']\\s*\\)|net\\.Socket"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "spawn\\(\\s*[\\\"']/bin/(?:ba|da)?sh|\\.pipe\\("
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-TELNET-PIPE",
+      "title": "Shell piped between two telnet connections",
+      "status": "test",
+      "description": "telnet host port | sh | telnet host port2, the two-connection telnet reverse shell.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "high",
+      "mitre": [
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\btelnet\\s+\\S+\\s+\\d+\\s*\\|\\s*(?:\\S*/)?(?:ba|da|z|k)?sh\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-RS-PTY-UPGRADE",
+      "title": "Shell upgraded to a full TTY",
+      "status": "test",
+      "description": "python pty.spawn or script -qc wrapping a shell, the usual way to turn a raw reverse shell into an interactive TTY.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "medium",
+      "mitre": [
+        "T1059"
+      ],
+      "source": "process",
+      "match": {
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "pty\\.spawn\\(\\s*[\\\"']/bin/(?:ba|da|z)?sh",
+              "\\bscript\\s+-qc\\s+(?:\\S*/)?(?:ba|da|z)?sh\\s+/dev/null",
+              "\\bscript\\s+/dev/null\\s+-qc\\s+(?:\\S*/)?(?:ba|da|z)?sh\\b"
+            ]
+          }
+        ]
+      },
+      "exceptions": [
+        {
+          "cmdline_contains": [
+            "socket"
+          ]
+        }
+      ],
+      "falsepositives": [
+        "Operators who use script(1) to record a root shell to /dev/null."
+      ]
+    },
+    {
+      "id": "PS08-RS-SHELL-FROM-WEB-SERVER",
+      "title": "Shell spawned by a web server",
+      "status": "test",
+      "description": "A shell whose parent is a web server or PHP worker, the footprint of a web shell or command injection.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "high",
+      "mitre": [
+        "T1505.003",
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "equals": [
+              "sh",
+              "bash",
+              "dash",
+              "zsh",
+              "ash",
+              "ksh"
+            ]
+          },
+          {
+            "field": "process.parent_comm",
+            "startswith": [
+              "nginx",
+              "apache2",
+              "httpd",
+              "lighttpd",
+              "caddy",
+              "php-fpm",
+              "php-cgi"
+            ]
+          }
+        ]
+      },
+      "exceptions": [
+        {
+          "cmdline_contains": [
+            "pihole",
+            "/opt/pihole/"
+          ]
+        }
+      ],
+      "falsepositives": [
+        "Web apps that shell out by design (Pi-hole's admin page is excepted)."
+      ]
+    },
+    {
+      "id": "PS08-C2-SSH-REVERSE-TUNNEL",
+      "title": "SSH reverse port forward",
+      "status": "test",
+      "description": "ssh -R exposes a port on this host through a remote server, a common way to keep remote access past NAT.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "medium",
+      "mitre": [
+        "T1572",
+        "T1021.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.comm",
+            "equals": [
+              "ssh"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\s-[a-zA-Z]*R\\s*(?:\\S+:)?\\d+:"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "autossh or ssh -R tunnels you set up for remote admin; add an exception with their command line."
+      ]
+    },
+    {
+      "id": "PS08-C2-CHISEL-REVERSE",
+      "title": "Chisel-style client opening a reverse tunnel",
+      "status": "test",
+      "description": "A client connecting out with R: reverse remotes, chisel's syntax for exposing this host to the far side. Matches renamed binaries too.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "high",
+      "mitre": [
+        "T1572",
+        "T1090"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bclient\\b.*\\sR:\\S"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-C2-GSOCKET",
+      "title": "Global Socket relay client",
+      "status": "test",
+      "description": "gs-netcat and friends from gsocket, a relay often deployed as a backdoor that needs no open port.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "high",
+      "mitre": [
+        "T1572",
+        "T1090"
+      ],
+      "source": "process",
+      "match": {
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bgs-(?:netcat|sftp|mount)\\b"
+            ]
+          },
+          {
+            "field": "process.exe",
+            "endswith": [
+              "/gs-netcat",
+              "/gs-dbus"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS08-C2-NGROK-SSH",
+      "title": "ngrok exposing SSH to the internet",
+      "status": "test",
+      "description": "ngrok publishing port 22, which puts SSH on a public endpoint outside the firewall.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "medium",
+      "mitre": [
+        "T1572"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bngrok\\b.*\\btcp\\s+(?:\\S+:)?22\\b"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "Deliberate remote access through ngrok."
+      ]
+    },
+    {
+      "id": "PS08-C2-FRP-CLIENT",
+      "title": "frp reverse proxy client",
+      "status": "test",
+      "description": "frpc dials out to an frp server and exposes local ports through it.",
+      "author": "pisentry",
+      "category": "PS08",
+      "level": "low",
+      "mitre": [
+        "T1572",
+        "T1090"
+      ],
+      "source": "process",
+      "match": {
+        "any": [
+          {
+            "field": "process.comm",
+            "equals": [
+              "frpc"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:^|/)frpc\\s+(?:-c|--config)\\b"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "Homelab setups that use frp on purpose."
+      ]
+    }
+  ]
+}
