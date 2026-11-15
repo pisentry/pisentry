@@ -281,12 +281,15 @@ type CategoryCount struct {
 	Worst    string `json:"worst"`
 }
 
-// Top10 counts events per category since t.
-func (s *Store) Top10(ctx context.Context, since time.Time) ([]CategoryCount, error) {
+// Top10 counts events per category since t, across the fleet or, when host
+// is not empty, for that one host.
+func (s *Store) Top10(ctx context.Context, since time.Time, host string) ([]CategoryCount, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT category, COUNT(*), COUNT(DISTINCT host_id),
-  MAX(CASE severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)
-FROM events WHERE time >= ? GROUP BY category ORDER BY category`, since.Unix())
+SELECT e.category, COUNT(*), COUNT(DISTINCT e.host_id),
+  MAX(CASE e.severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)
+FROM events e JOIN hosts h ON h.id = e.host_id
+WHERE e.time >= ? AND (? = '' OR h.name = ?)
+GROUP BY e.category ORDER BY e.category`, since.Unix(), host, host)
 	if err != nil {
 		return nil, err
 	}

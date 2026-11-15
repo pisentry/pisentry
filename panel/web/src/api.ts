@@ -68,3 +68,11 @@ export function ago(iso: string): string {
   if (s < 86400) return `${Math.round(s / 3600)}h ago`
   return `${Math.round(s / 86400)}d ago`
 }
+
+export function hostHref(name: string): string {
+  return '#/hosts/' + encodeURIComponent(name)
+}
+
+export function openHost(name: string) {
+  location.hash = hostHref(name)
+}

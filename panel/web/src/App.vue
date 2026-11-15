@@ -1,34 +1,50 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { getToken, setToken, get, Unauthorized } from './api'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { getToken, setToken, get, hostHref, Unauthorized, type Host } from './api'
 import Icon from './Icon.vue'
 import Mark from './Mark.vue'
 import Overview from './Overview.vue'
 import Events from './Events.vue'
 import Hosts from './Hosts.vue'
+import HostDetail from './HostDetail.vue'
 
-type Page = 'overview' | 'events' | 'hosts'
+type Route = { page: 'overview' } | { page: 'events' } | { page: 'hosts' } | { page: 'host'; name: string }
 
 const token = ref(getToken())
 const draft = ref('')
 const loginError = ref('')
-const page = ref<Page>(pageFromHash())
+const route = ref<Route>(routeFromHash())
 const eventsHost = ref('')
 const eventsCategory = ref('')
 
-const titles: Record<Page, string> = { overview: 'Overview', events: 'Events', hosts: 'Hosts' }
-const title = computed(() => titles[page.value])
-
-function pageFromHash(): Page {
-  if (location.hash.startsWith('#/events')) return 'events'
-  if (location.hash.startsWith('#/hosts')) return 'hosts'
-  return 'overview'
+function routeFromHash(): Route {
+  const h = location.hash
+  const m = h.match(/^#\/hosts\/(.+)$/)
+  if (m) {
+    try {
+      return { page: 'host', name: decodeURIComponent(m[1]) }
+    } catch {
+      return { page: 'hosts' }
+    }
+  }
+  if (h.startsWith('#/events')) return { page: 'events' }
+  if (h.startsWith('#/hosts')) return { page: 'hosts' }
+  return { page: 'overview' }
 }
 function onHash() {
-  page.value = pageFromHash()
+  route.value = routeFromHash()
 }
 onMounted(() => window.addEventListener('hashchange', onHash))
 onUnmounted(() => window.removeEventListener('hashchange', onHash))
+
+const crumb = computed(() => {
+  const r = route.value
+  if (r.page === 'host') return r.name
+  return { overview: 'Overview', events: 'Events', hosts: 'Hosts' }[r.page]
+})
+const current = (page: Route['page']) => (route.value.page === page ? 'page' : undefined)
+const currentHost = (name: string) =>
+  route.value.page === 'host' && route.value.name === name ? 'page' : undefined
 
 // Theme: dark by default, remembered per browser.
 const THEME_KEY = 'pisentry-panel-theme'
@@ -51,6 +67,31 @@ function toggleTheme() {
   }
 }
 
+// The sidebar's host list, refreshed like the pages.
+const hosts = ref<Host[]>([])
+const SIDE_HOSTS = 8
+const sideHosts = computed(() => {
+  // Quiet hosts first, so a Pi that stopped reporting is the first thing seen.
+  const order = { quiet: 0, ok: 1, waiting: 2 }
+  return [...hosts.value].sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name)).slice(0, SIDE_HOSTS)
+})
+const quietCount = computed(() => hosts.value.filter((h) => h.status === 'quiet').length)
+async function loadHosts() {
+  if (!token.value) return
+  try {
+    hosts.value = await get<Host[]>('hosts')
+  } catch (e) {
+    if (e instanceof Unauthorized) onAuthLost()
+  }
+}
+let timer: number | undefined
+onMounted(() => {
+  loadHosts()
+  timer = window.setInterval(loadHosts, 15000)
+})
+onUnmounted(() => clearInterval(timer))
+watch(token, loadHosts)
+
 async function login() {
   loginError.value = ''
   setToken(draft.value.trim())
@@ -67,6 +108,7 @@ async function login() {
 function logout() {
   setToken('')
   token.value = ''
+  hosts.value = []
 }
 
 function onAuthLost() {
@@ -103,13 +145,35 @@ function openEvents(filter: { host?: string; category?: string }) {
       <div class="side-brand"><Mark :size="22" /><span>pisentry</span></div>
 
       <nav class="side-nav" aria-label="Main">
-        <a href="#/" :aria-current="page === 'overview' ? 'page' : undefined"><Icon name="home" />Overview</a>
-        <a
-          href="#/events"
-          :aria-current="page === 'events' ? 'page' : undefined"
-          @click="eventsHost = ''; eventsCategory = ''"
-        ><Icon name="events" />Events</a>
-        <a href="#/hosts" :aria-current="page === 'hosts' ? 'page' : undefined"><Icon name="hosts" />Hosts</a>
+        <div class="side-group">
+          <span class="side-label">Monitor</span>
+          <a href="#/" :aria-current="current('overview')"><Icon name="home" />Overview</a>
+          <a href="#/events" :aria-current="current('events')" @click="eventsHost = ''; eventsCategory = ''">
+            <Icon name="events" />Events
+          </a>
+        </div>
+
+        <div class="side-group">
+          <span class="side-label">Fleet</span>
+          <a href="#/hosts" :aria-current="current('hosts')">
+            <Icon name="hosts" />Hosts
+            <span v-if="quietCount" class="side-badge warn" :title="quietCount + ' quiet'">{{ quietCount }} quiet</span>
+            <span v-else class="side-badge">{{ hosts.length }}</span>
+          </a>
+          <div class="side-hosts">
+            <a
+              v-for="h in sideHosts"
+              :key="h.name"
+              :href="hostHref(h.name)"
+              :aria-current="currentHost(h.name)"
+              :title="h.name + ' · ' + h.status"
+            >
+              <span class="status" :class="'st-' + h.status"><i></i></span>
+              <span class="side-host-name">{{ h.name }}</span>
+            </a>
+            <a v-if="hosts.length > SIDE_HOSTS" href="#/hosts" class="side-more">+{{ hosts.length - SIDE_HOSTS }} more</a>
+          </div>
+        </div>
       </nav>
 
       <div class="side-foot">
@@ -122,12 +186,21 @@ function openEvents(filter: { host?: string; category?: string }) {
 
     <div class="frame">
       <header class="topbar">
-        <span class="crumb">{{ title }}</span>
+        <span v-if="route.page === 'host'" class="crumb">
+          <a href="#/hosts">Hosts</a><span class="crumb-sep" aria-hidden="true">/</span><span class="crumb-here">{{ route.name }}</span>
+        </span>
+        <span v-else class="crumb">{{ crumb }}</span>
         <span class="live"><span class="live-dot" aria-hidden="true"></span>Live</span>
       </header>
       <main class="content">
-        <Overview v-if="page === 'overview'" @auth-lost="onAuthLost" @open-events="openEvents" />
-        <Hosts v-else-if="page === 'hosts'" @auth-lost="onAuthLost" @open-events="openEvents" />
+        <Overview v-if="route.page === 'overview'" @auth-lost="onAuthLost" @open-events="openEvents" />
+        <Hosts v-else-if="route.page === 'hosts'" @auth-lost="onAuthLost" />
+        <HostDetail
+          v-else-if="route.page === 'host'"
+          :name="route.name"
+          @auth-lost="onAuthLost"
+          @open-events="openEvents"
+        />
         <Events v-else :host="eventsHost" :category="eventsCategory" @auth-lost="onAuthLost" />
       </main>
     </div>

@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { get, ago, Unauthorized, type Host } from './api'
+import { get, ago, openHost, Unauthorized, type Host } from './api'
 
-const emit = defineEmits<{
-  'auth-lost': []
-  'open-events': [filter: { host?: string }]
-}>()
+const emit = defineEmits<{ 'auth-lost': [] }>()
 
 const hosts = ref<Host[]>([])
 const error = ref('')
@@ -66,7 +63,7 @@ function day(iso: string) {
           <tr><th>Host</th><th>Status</th><th>Reports as</th><th>Added</th><th>Last seen</th><th class="num">Events 24h</th></tr>
         </thead>
         <tbody>
-          <tr v-for="h in hosts" :key="h.name" class="clickable" @click="emit('open-events', { host: h.name })">
+          <tr v-for="h in hosts" :key="h.name" class="clickable" @click="openHost(h.name)">
             <td><span class="host-name">{{ h.name }}</span></td>
             <td><span class="status" :class="'st-' + h.status"><i></i>{{ statusText[h.status] }}</span></td>
             <td class="mono dim">{{ h.reported_as || '—' }}</td>

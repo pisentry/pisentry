@@ -154,6 +154,9 @@ func TestAPI(t *testing.T) {
 	if !strings.Contains(body, `"category":"PS08"`) {
 		t.Fatalf("top10: %s", body)
 	}
+	if _, body = f.do(t, "GET", "/api/top10?host=pi-b", f.admin, ""); strings.TrimSpace(body) != "[]" {
+		t.Fatalf("top10 for a host with no events: %s", body)
+	}
 }
 
 func TestCheckListen(t *testing.T) {

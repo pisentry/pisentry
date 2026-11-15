@@ -101,9 +101,15 @@ func TestIngestQueryPrune(t *testing.T) {
 		t.Fatalf("category filter: %+v", rows)
 	}
 
-	top, _ := s.Top10(ctx, now.Add(-24*time.Hour))
+	top, _ := s.Top10(ctx, now.Add(-24*time.Hour), "")
 	if len(top) != 2 || top[0].Category != "PS01" || top[1].Worst != "critical" || top[1].Hosts != 1 {
 		t.Fatalf("top10: %+v", top)
+	}
+	if top, _ := s.Top10(ctx, now.Add(-24*time.Hour), "pi-a"); len(top) != 2 {
+		t.Fatalf("top10 for pi-a: %+v", top)
+	}
+	if top, _ := s.Top10(ctx, now.Add(-24*time.Hour), "pi-b"); len(top) != 0 {
+		t.Fatalf("top10 for another host: %+v", top)
 	}
 
 	if raw, err := s.EventRaw(ctx, "pi-a", "1"); err != nil || raw == "" {

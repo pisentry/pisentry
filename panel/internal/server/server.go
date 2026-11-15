@@ -258,7 +258,7 @@ func (s *Server) top10(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	rows, err := s.Store.Top10(r.Context(), t)
+	rows, err := s.Store.Top10(r.Context(), t, r.URL.Query().Get("host"))
 	if err != nil {
 		s.internal(w, err)
 		return
