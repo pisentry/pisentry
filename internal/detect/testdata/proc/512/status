@@ -1,0 +1,25 @@
+Name:	avahi-daemon
+Umask:	0022
+State:	S (sleeping)
+Tgid:	512
+Ngid:	0
+Pid:	512
+PPid:	1
+TracerPid:	0
+Uid:	108	108	108	108
+Gid:	108	108	108	108
+FDSize:	64
+Groups:	
+VmPeak:	  119747 kB
+VmSize:	  119235 kB
+VmRSS:	    5648 kB
+Threads:	1
+SigQ:	0/7787
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+Seccomp:	0
+voluntary_ctxt_switches:	6656
+nonvoluntary_ctxt_switches:	27

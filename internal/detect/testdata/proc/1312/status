@@ -1,0 +1,25 @@
+Name:	pause
+Umask:	0022
+State:	S (sleeping)
+Tgid:	1312
+Ngid:	0
+Pid:	1312
+PPid:	1290
+TracerPid:	0
+Uid:	65535	65535	65535	65535
+Gid:	65535	65535	65535	65535
+FDSize:	64
+Groups:	
+VmPeak:	  122947 kB
+VmSize:	  122435 kB
+VmRSS:	    6048 kB
+Threads:	1
+SigQ:	0/7787
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+Seccomp:	0
+voluntary_ctxt_switches:	17056
+nonvoluntary_ctxt_switches:	51

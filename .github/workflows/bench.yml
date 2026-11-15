@@ -1,0 +1,103 @@
+name: bench
+
+# Benchmarks for the event path (sanitize, rule match at 75/500/1,000 rules,
+# JSON encode, emit, proc scan) on the native arm64 runner. Pull requests run
+# the base branch and the change in alternating rounds on the same machine,
+# compare them with benchstat, and fail on a hot path regression over the
+# limit in bench/budget.json. Every run checks the absolute budget and posts
+# the results as the job summary. See bench/README.md.
+on:
+  pull_request:
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "internal/**/testdata/**"
+      - "bench/**"
+      - ".github/workflows/bench.yml"
+  push:
+    branches: [main]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "internal/**/testdata/**"
+      - "bench/**"
+      - ".github/workflows/bench.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    env:
+      # CI-only tool, never a module dependency. golang.org/x/perf has no tags.
+      BENCHSTAT: golang.org/x/perf/cmd/benchstat@v0.0.0-20261009192801-be2c69fb417e
+      BENCH_PKGS: ./internal/engine ./internal/rules ./internal/detect
+      GOTOOLCHAIN: local # base and head build with the same Go
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: head
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: head/go.mod
+          check-latest: true
+          cache: false
+      - name: run benchmarks
+        run: |
+          # Alternate base and head so runner drift hits both alike:
+          # 5 rounds of 2 runs, 10 samples each.
+          sides=head
+          [ -d base ] && sides="base head"
+          for round in 1 2 3 4 5; do
+            for side in $sides; do
+              echo "== round $round: $side"
+              # A base without benchmarks, or one that fails, only loses the comparison.
+              (cd "$side" && go test -run '^$' -bench . -benchmem -benchtime 500ms -count 2 $BENCH_PKGS) >> "$side.txt" \
+                || [ "$side" = base ] || exit 1
+            done
+          done
+      - name: compare and check the budget
+        run: |
+          compare=()
+          if [ -f base.txt ] && grep -q '^Benchmark' base.txt; then
+            go run "$BENCHSTAT" -format csv base=base.txt head=head.txt > benchstat.csv
+            go run "$BENCHSTAT" base=base.txt head=head.txt > benchstat.txt
+            compare=(-compare "$GITHUB_WORKSPACE/benchstat.csv")
+          else
+            go run "$BENCHSTAT" head.txt > benchstat.txt
+          fi
+          status=0
+          (cd head && go run ./bench/benchgate -budget bench/budget.json -head "$GITHUB_WORKSPACE/head.txt" "${compare[@]}") > report.md || status=$?
+          {
+            cat report.md
+            printf '\n<details><summary>benchstat (%s, %s)</summary>\n\n```\n' "$(go env GOARCH)" "$(nproc) CPUs"
+            cat benchstat.txt
+            printf '```\n</details>\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat report.md
+          exit "$status"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: bench-results
+          path: |
+            base.txt
+            head.txt
+            benchstat.txt
+            benchstat.csv
+          if-no-files-found: ignore
+          retention-days: 30

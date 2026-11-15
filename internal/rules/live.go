@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,6 +22,7 @@ type Live struct {
 	dir      string
 	disabled []string // rules.disabled_packs
 	cur      atomic.Pointer[Engine]
+	bundle   atomic.Pointer[Manifest] // signed bundle in dir at the last successful reload
 
 	mu   sync.Mutex // serializes reloads and guards seen
 	seen string     // fingerprint of dir at the last reload attempt
@@ -47,13 +49,18 @@ func (l *Live) Reload() (*Engine, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.seen, _ = Fingerprint(l.dir)
-	eng, err := LoadOrDefault(l.dir, l.disabled)
+	eng, m, err := Load(l.dir, l.disabled)
 	if err != nil {
 		return l.cur.Load(), err
 	}
 	l.cur.Store(eng)
+	l.bundle.Store(m)
 	return eng, nil
 }
+
+// Bundle returns the signed bundle loaded by the last successful Reload, or
+// nil if there was none.
+func (l *Live) Bundle() *Manifest { return l.bundle.Load() }
 
 // changed reports whether dir differs from the last reload attempt.
 func (l *Live) changed() bool {
@@ -68,9 +75,10 @@ func (l *Live) changed() bool {
 
 // ReloadResult is passed to the Watch callback after every reload attempt.
 type ReloadResult struct {
-	Engine  *Engine // the active set after the attempt
-	Err     error   // nil when the new set was swapped in
-	Trigger string  // "signal" or "watch"
+	Engine  *Engine   // the active set after the attempt
+	Bundle  *Manifest // the signed bundle in the active set, if any
+	Err     error     // nil when the new set was swapped in
+	Trigger string    // "signal" or "watch"
 }
 
 // Watch reloads when a value arrives on hup and, if poll is positive, when
@@ -88,7 +96,7 @@ func (l *Live) Watch(ctx context.Context, hup <-chan os.Signal, poll, debounce t
 	run := func(trigger string) {
 		eng, err := l.Reload()
 		if done != nil {
-			done(ReloadResult{Engine: eng, Err: err, Trigger: trigger})
+			done(ReloadResult{Engine: eng, Bundle: l.Bundle(), Err: err, Trigger: trigger})
 		}
 	}
 	for {
@@ -166,6 +174,13 @@ func Fingerprint(dir string) (string, error) {
 		_, _ = io.Copy(h, io.LimitReader(fh, MaxFileSize+1))
 		fh.Close()
 		h.Write([]byte{0})
+	}
+	// A re-signed manifest (new version or expiry, same files) is a change
+	// too, so the reported bundle version follows it.
+	if b, err := readLimited(filepath.Join(dir, ManifestName), MaxManifestSize); err == nil {
+		_, _ = io.WriteString(h, ManifestName)
+		h.Write([]byte{0})
+		h.Write(b)
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
