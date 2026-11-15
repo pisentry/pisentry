@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "arm-linux-gnuea",
+    "exe": "/usr/bin/arm-linux-gnueabihf-gcc",
+    "cmdline": "arm-linux-gnueabihf-gcc -O2 -c main.c",
+    "uid": 1000
+  },
+  "parent_comm": "make"
+}

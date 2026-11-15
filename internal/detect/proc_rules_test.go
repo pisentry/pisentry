@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/pisentry/pisentry/internal/config"
@@ -86,5 +87,41 @@ func TestProcRulesNonMinerCategory(t *testing.T) {
 	miners := s.byCat(event.Cryptominer)
 	if len(miners) != 1 || miners[0].Rule == nil || miners[0].Rule.ID != "TEST-MINER" {
 		t.Fatalf("want 1 rule-backed miner event, got %+v", miners)
+	}
+}
+
+// Several PS06 rules can match one process. They share one event, so the
+// worst level must win even when a lower one comes first, and a PS06 rule
+// that is not about mining must not be called a cryptominer.
+func TestProcRulesWorstPS06Wins(t *testing.T) {
+	procRoot := filepath.Join(t.TempDir(), "proc")
+	d, s, _ := newDeps(t, func(cfg *config.Config) { cfg.ProcRoot = procRoot })
+	re, err := rules.NewEngineFromBytes("test.json", []byte(`{"schema_version": 1, "rules": [
+	  {"id": "TEST-BOT-HIGH", "title": "Binary in /tmp", "category": "PS06", "level": "high",
+	   "mitre": ["T1204.002"], "source": "process",
+	   "match": {"all": [{"field": "process.exe", "startswith": ["/tmp/"]}]}},
+	  {"id": "TEST-BOT-CRIT", "title": "Known botnet name", "category": "PS06", "level": "critical",
+	   "mitre": ["T1204.002"], "source": "process",
+	   "match": {"all": [{"field": "process.exe", "contains": ["Mozi.m"]}]}}
+	]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.Rules = re
+	writeProc(t, procRoot, 800, 1, "Mozi.m", "/tmp/Mozi.m")
+
+	if err := NewProcWatch(d).Scan(); err != nil {
+		t.Fatal(err)
+	}
+	evs := s.byCat(event.Cryptominer)
+	if len(evs) != 1 {
+		t.Fatalf("want 1 PS06 event, got %d: %+v", len(evs), evs)
+	}
+	ev := evs[0]
+	if ev.Severity != event.Critical || ev.Rule == nil || ev.Rule.ID != "TEST-BOT-CRIT" {
+		t.Fatalf("worst PS06 hit not reported: %+v", ev)
+	}
+	if !strings.HasPrefix(ev.Summary, "Suspicious process") {
+		t.Fatalf("non-mining PS06 rule summarized as %q", ev.Summary)
 	}
 }

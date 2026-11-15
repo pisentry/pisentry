@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "gawk",
+    "exe": "/usr/bin/gawk",
+    "cmdline": "gawk -f /usr/share/awk/report.awk /var/log/app.log",
+    "uid": 1000
+  },
+  "parent_comm": "cron"
+}

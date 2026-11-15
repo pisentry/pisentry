@@ -85,6 +85,9 @@ type RulesConfig struct {
 	// ReloadInterval is how often Dir is checked for changes. "0s" turns the
 	// watch off; SIGHUP still reloads.
 	ReloadInterval Duration `json:"reload_interval"`
+	// DisabledPacks names built-in rule packs to leave out, for example
+	// ["iot-botnets"]. Every pack is on by default.
+	DisabledPacks []string `json:"disabled_packs"`
 }
 
 type SSHConfig struct {
