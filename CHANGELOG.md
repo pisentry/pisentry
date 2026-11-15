@@ -4,6 +4,10 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Added
+
+- Benchmarks and a performance budget for the event path: sanitizer, rule matching at 75, 500 and 1,000 rules, JSON encoding, emit and a proc scan over a fixture `/proc`. CI runs them on the native arm64 runner, compares pull requests with the base branch using benchstat, fails on a hot path regression over 20% or a broken budget, and posts the results as the job summary. The budget lives in `bench/budget.json`; see `bench/README.md` (#33)
+
 ### Changed
 
 - Kubernetes base pins the v0.2.1 image: the DaemonSet now runs `ghcr.io/pisentry/pisentry:v0.2.1` by digest, and the staging overlay comment shows the same override

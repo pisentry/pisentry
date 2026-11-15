@@ -1,0 +1,25 @@
+Name:	k3s-server
+Umask:	0022
+State:	S (sleeping)
+Tgid:	812
+Ngid:	0
+Pid:	812
+PPid:	1
+TracerPid:	0
+Uid:	0	0	0	0
+Gid:	0	0	0	0
+FDSize:	64
+Groups:	
+VmPeak:	  120947 kB
+VmSize:	  120435 kB
+VmRSS:	    4048 kB
+Threads:	22
+SigQ:	0/7787
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+CapInh:	0000000000000000
+CapPrm:	000001ffffffffff
+CapEff:	000001ffffffffff
+Seccomp:	0
+voluntary_ctxt_switches:	10556
+nonvoluntary_ctxt_switches:	36
