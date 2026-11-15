@@ -98,6 +98,7 @@ The panel listens on one HTTPS port (8443 by default) for ingest, the UI and `/m
 
 ## Follow-ups
 
-- `pisentry mcp` with read tools and typed fixes (v0.3.0)
-- The agent's `panel` output, heartbeats and `install.sh --panel` / `--panel-token` (v0.3.1)
-- `pisentry/panel` v0.1: ingest, host list with quiet hosts, fleet Top 10, event browser, accounts, read-only `/mcp`, Docker image (v0.3.1)
+- CLI fix commands, `pisentry exception add` and `pisentry pack on|off` (#74, v0.3.0)
+- `pisentry mcp` with read tools and typed fixes (#75, v0.3.0)
+- The agent's `panel` output, heartbeats and `install.sh --panel` / `--panel-token` (#76, v0.3.1)
+- `pisentry/panel` v0.1: ingest, host list with quiet hosts, fleet Top 10, event browser, accounts, read-only `/mcp`, Docker image (#77, v0.3.1)
