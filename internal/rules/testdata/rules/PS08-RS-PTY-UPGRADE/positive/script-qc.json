@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "script",
+    "exe": "/usr/bin/script",
+    "cmdline": "script -qc /bin/bash /dev/null",
+    "uid": 33
+  },
+  "parent_comm": "sh"
+}

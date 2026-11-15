@@ -8,9 +8,9 @@ pisentry runs on a 2 GB Pi next to the workloads it watches, so the event path h
 | `EncodeEvent` | `internal/engine` | JSON-encode one enriched event to the JSON sink |
 | `Emit` | `internal/engine` | one event through `Engine.Emit`: ID, sanitize, enrich, cooldown, metrics, JSON sink |
 | `RuleMatch/{process,sudo}/rules={75,500,1000}` | `internal/rules` | evaluate one event against that many rules of its source |
-| `ProcScan/{lazy,eager}` | `internal/detect` | one `ProcWatch.Scan` over 180 processes |
+| `ProcScan/{basic,parent_comm,default}` | `internal/detect` | one `ProcWatch.Scan` over 180 processes |
 
-`RuleMatch` generates its rules (literal and regex conditions on `process.cmdline`, `process.comm` and the sudo `log.msg`, some case-insensitive, some with exceptions), so it does not move when the shipped rules or packs change. `ProcScan` reads a fixture `/proc` from `internal/detect/testdata/proc`, 20 processes from a k3s node copied nine times. Symlinks (`exe`, `fd/*`) are listed in `testdata/proc/links` and created when the benchmark copies the tree, because not every checkout can store them. `eager` adds a rule on `process.parent_comm`, which makes the scan read the uid and parent of every process.
+`RuleMatch` generates its rules (literal and regex conditions on `process.cmdline`, `process.comm` and the sudo `log.msg`, some case-insensitive, some with exceptions), so it does not move when the shipped rules or packs change. `ProcScan` reads a fixture `/proc` from `internal/detect/testdata/proc`, 20 processes from a k3s node copied nine times. Symlinks (`exe`, `fd/*`) are listed in `testdata/proc/links` and created when the benchmark copies the tree, because not every checkout can store them. `basic` and `parent_comm` use a small fixed rule set, without and with a rule on `process.parent_comm` (the scan then reads the uid and parent of candidate processes), so they track the scan itself. `default` uses the shipped rules, `default.json` plus the built-in packs, so it also moves when rules ship.
 
 ## Running them
 

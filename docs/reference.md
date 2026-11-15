@@ -57,6 +57,7 @@ Every key is optional. See [deploy/config.example.json](../deploy/config.example
 | `listeners.allow_ports` | `[]` | |
 | `rules.dir` | `/etc/pisentry/rules.d` | Operator rule bundles over the built-in rules. Env `PISENTRY_RULES_DIR` |
 | `rules.reload_interval` | `10s` | How often rules.d is checked for changes. `0s` turns the watch off; SIGHUP still reloads |
+| `rules.disabled_packs` | `[]` | Built-in [rule packs](rule-schema.md#rule-packs) to leave out, e.g. `["iot-botnets"]`. Every pack is on by default |
 | `proc.allow_comm` | build tools, k3s, prometheus | Processes allowed to burn CPU |
 | `fim.extra_watch` | `[]` | Add your own paths with a category and severity |
 | `logs.source` | `auto` | `journald`, `file` or `none` |

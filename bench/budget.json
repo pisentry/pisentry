@@ -11,7 +11,8 @@
     {"name": "RuleMatch/sudo/rules=75", "per": "event", "hot": true, "ns_per_op": 120000, "allocs_per_op": 8},
     {"name": "RuleMatch/sudo/rules=500", "per": "event", "hot": true, "ns_per_op": 800000, "allocs_per_op": 55},
     {"name": "RuleMatch/sudo/rules=1000", "per": "event", "hot": true, "ns_per_op": 2000000, "allocs_per_op": 110},
-    {"name": "ProcScan/lazy", "per": "scan of 180 processes", "hot": false, "ns_per_op": 5000000, "allocs_per_op": 5300},
-    {"name": "ProcScan/eager", "per": "scan of 180 processes", "hot": false, "ns_per_op": 8000000, "allocs_per_op": 9400}
+    {"name": "ProcScan/basic", "per": "scan of 180 processes", "hot": false, "ns_per_op": 5000000, "allocs_per_op": 5300},
+    {"name": "ProcScan/parent_comm", "per": "scan of 180 processes", "hot": false, "ns_per_op": 5000000, "allocs_per_op": 5500},
+    {"name": "ProcScan/default", "per": "scan of 180 processes", "hot": false, "ns_per_op": 12000000, "allocs_per_op": 5600}
   ]
 }

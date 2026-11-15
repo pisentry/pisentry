@@ -112,36 +112,45 @@ const scanBenchRules = `{
   ]
 }`
 
-// eagerRule matches on the parent comm, which makes ProcWatch read the uid
-// and parent for every process instead of only after a hit.
-const eagerRule = `,
+// parentRule matches on the parent comm. ProcWatch reads the uid and parent
+// only for processes whose comm, exe and cmdline leave it a candidate: here
+// the bash shells in the fixture.
+const parentRule = `,
     {"id": "SCAN-WEB-SHELL", "title": "Shell under a web server", "category": "PS08", "level": "high", "source": "process",
      "match": {"all": [{"field": "process.comm", "equals": ["sh", "bash"]},
                        {"field": "process.parent_comm", "equals": ["nginx", "apache2", "lighttpd"]}]}}`
 
-// BenchmarkProcScan is one ProcWatch.Scan over the fixture tree. In lazy no
-// rule reads the uid or parent, so they are only read after a hit; eager adds
-// a rule on process.parent_comm, which reads both for every process.
+// BenchmarkProcScan is one ProcWatch.Scan over the fixture tree. basic and
+// parent_comm use the small fixed rule set above, without and with a parent
+// comm rule, so they track the scan itself. default uses the shipped rules
+// (default.json and the built-in packs), so it also moves when rules ship.
 func BenchmarkProcScan(b *testing.B) {
+	fixed := func(extra string) func() (*rules.Engine, error) {
+		return func() (*rules.Engine, error) {
+			return rules.NewEngineFromBytes("bench.json", []byte(strings.Replace(scanBenchRules, "%s", extra, 1)))
+		}
+	}
 	for _, tc := range []struct {
-		name, extra string
+		name  string
+		rules func() (*rules.Engine, error)
 	}{
-		{"lazy", ""},
-		{"eager", eagerRule},
+		{"basic", fixed("")},
+		{"parent_comm", fixed(parentRule)},
+		{"default", func() (*rules.Engine, error) { return rules.Default(), nil }},
 	} {
 		b.Run(tc.name, func(b *testing.B) {
 			procRoot := filepath.Join(b.TempDir(), "proc")
 			nuser := copyProcFixture(b, procRoot)
-			re, err := rules.NewEngineFromBytes("bench.json", []byte(strings.Replace(scanBenchRules, "%s", tc.extra, 1)))
+			re, err := tc.rules()
 			if err != nil {
 				b.Fatal(err)
 			}
 			cfg := config.Defaults()
 			cfg.ProcRoot = procRoot
-			emitted := 0
+			var emitted []string
 			pw := NewProcWatch(Deps{
 				Cfg: &cfg, Rules: re, M: metrics.NewSet(),
-				Emit: event.EmitFunc(func(event.Event) { emitted++ }),
+				Emit: event.EmitFunc(func(ev event.Event) { emitted = append(emitted, ev.Summary) }),
 				Log:  slog.New(slog.NewTextHandler(io.Discard, nil)),
 			})
 			if err := pw.Scan(); err != nil {
@@ -150,8 +159,8 @@ func BenchmarkProcScan(b *testing.B) {
 			if got := len(pw.prev); got != nuser {
 				b.Fatalf("scan saw %d user processes, want %d", got, nuser)
 			}
-			if emitted != 0 {
-				b.Fatalf("fixture is benign but the scan emitted %d events", emitted)
+			if len(emitted) != 0 {
+				b.Fatalf("fixture is benign but the scan emitted %d events: %q", len(emitted), emitted)
 			}
 			b.ReportAllocs()
 			for b.Loop() {

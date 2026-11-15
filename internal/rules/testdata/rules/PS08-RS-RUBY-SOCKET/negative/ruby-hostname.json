@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "ruby3.1",
+    "exe": "/usr/bin/ruby3.1",
+    "cmdline": "ruby -e require 'socket'; puts Socket.gethostname",
+    "uid": 1000
+  },
+  "parent_comm": "bash"
+}

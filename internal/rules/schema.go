@@ -441,6 +441,60 @@ func (e *Engine) UsesField(src Source, field string) bool {
 	return false
 }
 
+// Candidates returns the rules for in.Source that could match in once the
+// deferred fields are filled in. A condition on a deferred field counts as
+// met and exceptions are skipped, so a rule left out cannot match. The
+// process scan uses it to read the uid and parent comm only for candidate
+// processes, then runs just the candidates with EvalAmong.
+func (e *Engine) Candidates(in *EvalInput, deferred ...string) []*CompiledRule {
+	if e == nil {
+		return nil
+	}
+	pool := e.rules
+	if in.Source != "" {
+		pool = e.bySrc[in.Source]
+	}
+	var out []*CompiledRule
+	for _, cr := range pool {
+		if cr.mayMatch(in, deferred) {
+			out = append(out, cr)
+		}
+	}
+	return out
+}
+
+// EvalAmong returns the rules in crs that fully match in.
+func EvalAmong(in *EvalInput, crs []*CompiledRule) []Rule {
+	var out []Rule
+	for _, cr := range crs {
+		if cr.Match(in) {
+			out = append(out, cr.Rule)
+		}
+	}
+	return out
+}
+
+func (cr *CompiledRule) mayMatch(in *EvalInput, deferred []string) bool {
+	if in.Source != "" && cr.Rule.Source != in.Source {
+		return false
+	}
+	met := func(c compiledCondition) bool { return slices.Contains(deferred, c.field) || c.eval(in) }
+	for _, c := range cr.all {
+		if !met(c) {
+			return false
+		}
+	}
+	if len(cr.any) == 0 {
+		return true
+	}
+	for _, c := range cr.any {
+		if met(c) {
+			return true
+		}
+	}
+	return false
+}
+
 // Eval returns every rule for in.Source that matches in.
 func (e *Engine) Eval(in *EvalInput) []Rule {
 	if e == nil {
