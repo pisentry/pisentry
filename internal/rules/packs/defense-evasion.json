@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "id": "PS03-EVADE-SUDO-FIREWALL-OFF",
+      "title": "Sudo command flushing or disabling the firewall",
+      "status": "test",
+      "description": "iptables -F, nft flush ruleset, ufw disable, a default ACCEPT policy, or stopping the firewall service.",
+      "author": "pisentry",
+      "category": "PS03",
+      "level": "high",
+      "mitre": [
+        "T1562.004"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:ip6?tables)(?:-legacy|-nft)?\\s+(?:-t\\s+\\w+\\s+)?-(?:F|X)\\b",
+              "\\bnft\\s+flush\\s+ruleset\\b",
+              "\\bufw\\s+(?:--force\\s+)?disable\\b",
+              "\\bip6?tables(?:-legacy|-nft)?\\s+-P\\s+INPUT\\s+ACCEPT\\b",
+              "\\bsystemctl\\s+(?:stop|disable|mask)\\s+(?:--now\\s+)?(?:ufw|firewalld|nftables|netfilter-persistent)\\b"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "Firewall debugging. On k3s nodes flushing iptables breaks the cluster, so it should never be routine."
+      ]
+    },
+    {
+      "id": "PS03-EVADE-SUDO-STOP-SECURITY",
+      "title": "Sudo command stopping a security agent",
+      "status": "test",
+      "description": "Stopping, disabling, masking or killing pisentry, auditd, Falco, fail2ban, CrowdSec, Wazuh, osquery or the system logger.",
+      "author": "pisentry",
+      "category": "PS03",
+      "level": "high",
+      "mitre": [
+        "T1562.001"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bsystemctl\\s+(?:stop|disable|mask|kill)\\s+(?:--now\\s+)?(?:pisentry|auditd|falco[\\w-]*|fail2ban|crowdsec[\\w-]*|wazuh-agent|osqueryd|rsyslog|systemd-journald)\\b",
+              "\\bservice\\s+(?:pisentry|auditd|fail2ban|rsyslog)\\s+stop\\b",
+              "\\b(?:pkill|killall)\\s+(?:-\\S+\\s+)*(?:pisentry|auditd|falco|fail2ban-server)\\b",
+              "\\bkubectl\\b.*\\bdelete\\b.*\\b(?:ds|daemonset)\\b.*\\bpisentry\\b"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "Planned maintenance. Upgrades through deploy/install.sh run as one sudo command and are not matched."
+      ]
+    },
+    {
+      "id": "PS10-EVADE-SUDO-LOG-WIPE",
+      "title": "Sudo command wiping authentication or system logs",
+      "status": "test",
+      "description": "Truncating, shredding, deleting or redirecting over auth.log, syslog, wtmp, btmp or lastlog, or vacuuming the journal to nothing.",
+      "author": "pisentry",
+      "category": "PS10",
+      "level": "high",
+      "mitre": [
+        "T1070.002"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:\\btruncate\\s+-s\\s*0\\s+|\\bshred\\b(?:\\s+-\\S+)*\\s+|\\brm\\s+(?:-\\S+\\s+)*|(?:^|[^>])>\\s*|\\bcp\\s+/dev/null\\s+|\\bln\\s+-sf\\s+/dev/null\\s+)/var/log/(?:auth\\.log|secure|syslog|messages|wtmp|btmp|lastlog|kern\\.log)(?:\\s|$)",
+              "\\bjournalctl\\b.*--vacuum-(?:time=[1-9]s|size=[1-9][KM]?)(?:\\s|$)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS10-EVADE-SUDO-HISTORY-TAMPER",
+      "title": "Sudo command erasing shell history",
+      "status": "test",
+      "description": "Deleting, shredding or linking a shell history file to /dev/null.",
+      "author": "pisentry",
+      "category": "PS10",
+      "level": "medium",
+      "mitre": [
+        "T1070.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bln\\s+-sf\\s+/dev/null\\s+\\S*\\.(?:bash|zsh|ash|sh)_history\\b",
+              "\\b(?:rm|shred|truncate)\\b.*\\.(?:bash|zsh|ash)_history\\b",
+              "HISTFILE=/dev/null"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS10-EVADE-SUDO-TIMESTOMP",
+      "title": "Sudo touch setting timestamps on system files",
+      "status": "test",
+      "description": "touch -r, -d or -t on files under /etc, /usr/bin, /bin or /lib, used to make a planted file look old.",
+      "author": "pisentry",
+      "category": "PS10",
+      "level": "medium",
+      "mitre": [
+        "T1070.006"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\btouch\\s+(?:-\\S+\\s+)*(?:-r\\s+\\S+|-d\\s+\\S+|--date[= ]\\S+|--reference[= ]\\S+|-t\\s+\\d{8,})\\s+(?:\\S+\\s+)*/(?:etc|usr/s?bin|s?bin|lib|usr/lib)/"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS03-EVADE-SUDO-MAC-OFF",
+      "title": "Sudo command turning off AppArmor or SELinux",
+      "status": "test",
+      "description": "setenforce 0, aa-teardown, aa-disable, apparmor_parser -R or stopping the AppArmor service.",
+      "author": "pisentry",
+      "category": "PS03",
+      "level": "medium",
+      "mitre": [
+        "T1562.001"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bsetenforce\\s+0\\b",
+              "\\baa-teardown\\b",
+              "\\baa-disable\\b",
+              "\\bapparmor_parser\\s+(?:-\\S+\\s+)*-R\\b",
+              "\\bsystemctl\\s+(?:stop|disable|mask)\\s+(?:--now\\s+)?apparmor\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS03-EVADE-SUDO-KERNEL-HARDENING-OFF",
+      "title": "Sudo command weakening kernel exploit protections",
+      "status": "test",
+      "description": "Turning off ASLR, allowing ptrace of any process, or exposing kernel pointers.",
+      "author": "pisentry",
+      "category": "PS03",
+      "level": "medium",
+      "mitre": [
+        "T1562.001"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bsysctl\\s+(?:-w\\s+)?kernel\\.(?:randomize_va_space=0|yama\\.ptrace_scope=0|kptr_restrict=0)\\b",
+              "/proc/sys/kernel/(?:randomize_va_space|yama/ptrace_scope|kptr_restrict)\\b"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

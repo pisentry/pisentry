@@ -1,0 +1,486 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "id": "PS05-PERSIST-SUDO-AUTHORIZED-KEYS",
+      "title": "Sudo write to an authorized_keys file",
+      "status": "test",
+      "description": "A sudo command that writes, copies or edits an SSH authorized_keys file. FIM sees the change; this rule says who made it.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "medium",
+      "mitre": [
+        "T1098.004"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              ">>?\\s*\\S*authorized_keys2?\\b",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+\\S*authorized_keys2?\\b",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s\\S*authorized_keys2?\\b\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s\\S*authorized_keys2?\\b",
+              "\\bdd\\b[^|;&]*\\bof=\\S*authorized_keys2?\\b"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "Adding a key for a new user with sudo tee."
+      ]
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-PAM-MODULE-DROP",
+      "title": "Sudo copy of a PAM module into the security directory",
+      "status": "test",
+      "description": "A sudo command that copies, links or builds a pam_*.so into lib/security, how PAM backdoors are installed.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "critical",
+      "mitre": [
+        "T1556.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:cp|mv|install|ln|dd|gcc|cc|tee)\\b.*security/pam_[\\w.-]+\\.so"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-PAM-EXEC",
+      "title": "Sudo write adding pam_exec to a PAM stack",
+      "status": "test",
+      "description": "A sudo command that writes a pam_exec or pam_script line into /etc/pam.d, which runs a program on every login.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "high",
+      "mitre": [
+        "T1556.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "pam_exec\\.so|pam_script\\b"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              ">>?\\s*/etc/pam\\.d/",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/etc/pam\\.d/",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/etc/pam\\.d/\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/etc/pam\\.d/",
+              "\\bdd\\b[^|;&]*\\bof=/etc/pam\\.d/"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-SYSTEMD-GENERATOR",
+      "title": "Sudo write into a systemd generator directory",
+      "status": "test",
+      "description": "Generators run very early at every boot and on daemon-reload; a new one is rare and powerful.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "high",
+      "mitre": [
+        "T1543.002"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              ">>?\\s*/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\bdd\\b[^|;&]*\\bof=/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\bchmod\\b[^|;&]*\\s/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-SYSTEMCTL-LINK-TMP",
+      "title": "Sudo systemctl enabling a unit from a temporary directory",
+      "status": "test",
+      "description": "systemctl link or enable on a unit file in /tmp, /dev/shm or a home directory.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "high",
+      "mitre": [
+        "T1543.002"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "systemctl\\s+(?:--\\S+\\s+)*(?:link|enable)\\s+(?:--now\\s+)?/(?:tmp|var/tmp|dev/shm|home)/"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-SYSTEMD-RUN-TIMER",
+      "title": "Sudo transient systemd timer running a suspicious command",
+      "status": "test",
+      "description": "systemd-run with a timer option that runs something from /tmp, a shell -c, or a download.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "medium",
+      "mitre": [
+        "T1053.006"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "systemd-run\\b.*--on-(?:calendar|boot|startup|unit-active|active)"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "/(?:tmp|var/tmp|dev/shm)/|\\b(?:ba|da)?sh\\s+-c\\b|\\b(?:curl|wget)\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-CRON-DOWNLOAD",
+      "title": "Sudo cron entry that downloads and runs code",
+      "status": "test",
+      "description": "A crontab or cron.d write whose job pipes curl or wget into a shell, or decodes base64.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "high",
+      "mitre": [
+        "T1053.003"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "crontab|/etc/cron|/var/spool/cron"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:curl|wget)\\b[^|;]*\\|\\s*(?:\\S*/)?(?:ba|da|z|k)?sh\\b",
+              "/dev/tcp/",
+              "\\bbase64\\s+(?:-d|--decode)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-SHELL-PROFILE",
+      "title": "Sudo write to a system-wide shell profile",
+      "status": "test",
+      "description": "A sudo command that writes to /etc/profile, profile.d, bash.bashrc, /etc/environment or root's dotfiles, which run at every login.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "medium",
+      "mitre": [
+        "T1546.004"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              ">>?\\s*(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))",
+              "\\bdd\\b[^|;&]*\\bof=(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))"
+            ]
+          }
+        ]
+      },
+      "falsepositives": [
+        "Provisioning that drops proxy or locale settings into profile.d."
+      ]
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-UDEV-RUN",
+      "title": "Sudo udev rule that runs a program",
+      "status": "test",
+      "description": "A udev rule with RUN+= written by sudo, or a .rules file copied in from a temporary directory.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "high",
+      "mitre": [
+        "T1546.017"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "/(?:etc|lib|usr/lib)/udev/rules\\.d/"
+            ]
+          }
+        ],
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "RUN\\+?=",
+              "\\b(?:cp|mv|install)\\s+(?:\\S+\\s+)*/(?:tmp|var/tmp|dev/shm|home)/"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-KMOD-FROM-TMP",
+      "title": "Sudo insmod of a module outside the module tree",
+      "status": "test",
+      "description": "insmod of a .ko from /tmp, /dev/shm or a home directory, how loadable rootkits are loaded.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "high",
+      "mitre": [
+        "T1547.006",
+        "T1014"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:^|/)insmod\\s+(?:\\S+\\s+)*/(?:tmp|var/tmp|dev/shm|home|root|run/user)/\\S+\\.ko(?:\\.\\w+)?\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-SUDOERS-NOPASSWD",
+      "title": "Sudo write granting NOPASSWD sudo",
+      "status": "test",
+      "description": "A sudo command that writes a NOPASSWD rule into sudoers or sudoers.d.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "high",
+      "mitre": [
+        "T1548.003",
+        "T1098"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "NOPASSWD"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              ">>?\\s*/etc/sudoers",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/etc/sudoers",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/etc/sudoers\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/etc/sudoers",
+              "\\bdd\\b[^|;&]*\\bof=/etc/sudoers"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-SERVICE-ACCOUNT-SHELL",
+      "title": "Sudo giving a service account a login shell",
+      "status": "test",
+      "description": "usermod -s or chsh giving www-data, nobody or another system account a real shell.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "medium",
+      "mitre": [
+        "T1098"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:usermod|chsh)\\b.*-s\\s+(?:\\S*/)?(?:ba|da|z|k)?sh\\b.*\\b(?:www-data|nobody|daemon|bin|sys|games|man|lp|mail|news|proxy|backup|list|irc|_apt|messagebus|systemd-[\\w-]+)\\s*$"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-RC-INIT-WRITE",
+      "title": "Sudo write to rc.local or an init script",
+      "status": "test",
+      "description": "A sudo command that writes rc.local or drops a script from a temporary directory into /etc/init.d.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "medium",
+      "mitre": [
+        "T1037.004"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "/etc/rc\\.local\\b|/etc/init\\.d/"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\btee\\b|>>?\\s*/etc/|\\b(?:cp|mv|install)\\b.*\\s/(?:tmp|var/tmp|dev/shm)/"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS05-PERSIST-SUDO-MOTD-SCRIPT",
+      "title": "Sudo write to an update-motd script",
+      "status": "test",
+      "description": "Scripts in /etc/update-motd.d run as root at every SSH login.",
+      "author": "pisentry",
+      "category": "PS05",
+      "level": "medium",
+      "mitre": [
+        "T1546"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              ">>?\\s*/etc/update-motd\\.d/",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/etc/update-motd\\.d/",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/etc/update-motd\\.d/\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/etc/update-motd\\.d/",
+              "\\bdd\\b[^|;&]*\\bof=/etc/update-motd\\.d/",
+              "\\bchmod\\b[^|;&]*\\s/etc/update-motd\\.d/"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

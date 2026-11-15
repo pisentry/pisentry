@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "sh",
+    "exe": "/usr/bin/dash",
+    "cmdline": "sh -c cd /tmp && curl -LO https://dl.k8s.io/release/v1.31.0/bin/linux/arm64/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/",
+    "uid": 0
+  },
+  "parent_comm": "bash"
+}

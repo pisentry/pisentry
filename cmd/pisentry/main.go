@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -110,6 +111,11 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
+	// A bad pack name is a config error, not a rules.d problem: every later
+	// reload would fail on it, so refuse to start.
+	if _, err := rules.Base(cfg.Rules.DisabledPacks); err != nil {
+		return err
+	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	host := cfg.ResolveHostname()
 
@@ -155,7 +161,7 @@ func cmdRun(args []string) error {
 	}
 
 	re, bundle := loadRules(cfg, log)
-	live := rules.NewLive(cfg.Rules.Dir, re)
+	live := rules.NewLive(cfg.Rules.Dir, cfg.Rules.DisabledPacks, re)
 	noteBundle(bundle, m, log)
 	m.RulesLoaded.Set(float64(len(live.Get().Rules())))
 	m.RulesLastReload.Set(float64(time.Now().Unix()))
@@ -335,10 +341,14 @@ func cmdAudit(args []string) (int, error) {
 // logs loudly and runs on the built-in rules. `pisentry check` catches the
 // same error before a restart.
 func loadRules(cfg *config.Config, log *slog.Logger) (*rules.Engine, *rules.Manifest) {
-	re, bundle, err := rules.Load(cfg.Rules.Dir)
+	re, bundle, err := rules.Load(cfg.Rules.Dir, cfg.Rules.DisabledPacks)
 	if err != nil {
 		log.Error("rules.d rejected; running on built-in rules only", "dir", cfg.Rules.Dir, "err", err)
-		re, bundle = rules.Default(), nil
+		bundle = nil
+		// cmdRun validated disabled_packs before this, so Base cannot fail.
+		if re, err = rules.Base(cfg.Rules.DisabledPacks); err != nil {
+			re = rules.Default()
+		}
 	}
 	log.Info("rules loaded", "rules", len(re.Rules()), "dir", cfg.Rules.Dir)
 	return re, bundle
@@ -414,7 +424,7 @@ func cmdCheck(args []string) error {
 		fmt.Printf("ok: %s, %d rules%s\n", *dir, len(re.Rules()), note)
 		return nil
 	}
-	re, _, err := rules.Load(cfg.Rules.Dir)
+	re, _, err := rules.Load(cfg.Rules.Dir, cfg.Rules.DisabledPacks)
 	if err != nil {
 		return err
 	}
@@ -422,6 +432,19 @@ func cmdCheck(args []string) error {
 	if err != nil {
 		return err
 	}
+	states, err := rules.PackStates(cfg.Rules.DisabledPacks)
+	if err != nil {
+		return err
+	}
+	var packs []string
+	for _, p := range states {
+		state := "on"
+		if !p.Enabled {
+			state = "off"
+		}
+		packs = append(packs, fmt.Sprintf("%s (%d rules, %s)", p.Name, p.Rules, state))
+	}
+	fmt.Printf("packs: %s\n", strings.Join(packs, ", "))
 	fmt.Printf("ok: built-in rules plus %s, %d rules%s\n", cfg.Rules.Dir, len(re.Rules()), note)
 	return nil
 }

@@ -288,7 +288,7 @@ func TestLiveVerifiesBundle(t *testing.T) {
 	dir := t.TempDir()
 	writeSignedBundle(t, dir, k, 9, map[string][]byte{"bundle-a.json": bundleJSON(t, evilRule("TEST-BUNDLE"))})
 
-	l := NewLive(dir, Default())
+	l := NewLive(dir, nil, Default())
 	eng, err := l.Reload()
 	if err != nil {
 		t.Fatal(err)
@@ -330,4 +330,38 @@ func TestFingerprintCoversManifest(t *testing.T) {
 func hasRule(e *Engine, id string) bool {
 	_, ok := e.RuleByID(id)
 	return ok
+}
+
+// A bundle carries newer copies of the embedded packs. With a pack
+// disabled, its bundle file is verified but not loaded, so it neither
+// brings the pack back nor gets rules.d rejected.
+func TestBundleSkipsDisabledPack(t *testing.T) {
+	k := testKey(1)
+	trustKeys(t, k)
+	victim := Packs()[0]
+	id := victim.Rules[0].Rule.ID
+	dir := t.TempDir()
+	writeSignedBundle(t, dir, k, 3, map[string][]byte{
+		"bundle-" + victim.Name + ".json": bundleJSON(t, evilRule(id)),
+		"bundle-extra.json":               bundleJSON(t, evilRule("TEST-EXTRA")),
+	})
+
+	eng, m, err := Load(dir, []string{victim.Name})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m == nil || m.Version != 3 {
+		t.Fatalf("bundle not verified: %+v", m)
+	}
+	if hasRule(eng, id) || !hasRule(eng, "TEST-EXTRA") {
+		t.Fatal("disabled pack's bundle file was loaded, or the other file was not")
+	}
+
+	eng, _, err = Load(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cr, ok := eng.RuleByID(id); !ok || cr.Rule.Title != "Test rule" {
+		t.Fatal("bundle copy did not replace the embedded pack rule")
+	}
 }

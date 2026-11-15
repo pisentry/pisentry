@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "id": "PS06-BOT-DROPPER-CHAIN",
+      "title": "IoT botnet download-and-run chain",
+      "status": "test",
+      "description": "The Mirai and Gafgyt infection line: cd into a writable directory with || fallbacks, fetch, chmod 777, run. Reported under PS06 because the Top 10 has no separate malware category yet.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "critical",
+      "mitre": [
+        "T1105",
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:wget|curl|tftp|ftpget)\\b"
+            ]
+          }
+        ],
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bcd\\s+/\\S*\\s*\\|\\|\\s*cd\\s",
+              "\\bchmod\\s+777\\b[^;&|]*[;&|]+\\s*(?:\\./|sh\\s)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS06-BOT-SUDO-DROPPER-CHAIN",
+      "title": "IoT botnet download-and-run chain under sudo",
+      "status": "test",
+      "description": "The same infection line run through sudo.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "critical",
+      "mitre": [
+        "T1105",
+        "T1059.004"
+      ],
+      "source": "log",
+      "match": {
+        "all": [
+          {
+            "field": "log.ident",
+            "equals": [
+              "sudo"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\b(?:wget|curl|tftp|ftpget)\\b"
+            ]
+          }
+        ],
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bcd\\s+/\\S*\\s*\\|\\|\\s*cd\\s",
+              "\\bchmod\\s+777\\b[^;&|]*[;&|]+\\s*(?:\\./|sh\\s)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS06-BOT-BUSYBOX-FETCH",
+      "title": "busybox tftp or ftpget fetching a payload",
+      "status": "test",
+      "description": "busybox tftp -g or ftpget, which IoT droppers use when wget is missing.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "high",
+      "mitre": [
+        "T1105"
+      ],
+      "source": "process",
+      "match": {
+        "any": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "\\bbusybox\\s+(?:tftp\\b.*\\s-[gr]\\b|ftpget\\b)",
+              "(?:^|\\s)tftp\\s+-g\\s+-r\\s+\\S+\\s+\\S+"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS06-BOT-ARCH-NAMED-BINARY",
+      "title": "Binary named after a CPU architecture running from a temp directory",
+      "status": "test",
+      "description": "Mirai-family builds are shipped as arm7, mpsl, x86 and so on and run from /tmp or /var/run.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "critical",
+      "mitre": [
+        "T1204.002"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.exe",
+            "regex": [
+              "^/(?:tmp|var/tmp|dev/shm|var/run|run|mnt)/(?:[^/]+/)*\\.?(?:mips|mipsel|mpsl|arm[4-7]?|armv[4-7]l?|aarch64|x86(?:_64)?|i[3-6]86|sh4|m68k|ppc|powerpc|spc|sparc|arc)(?:\\.\\w+)?(?: \\(deleted\\))?$"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS06-BOT-DELETED-TMP-BINARY",
+      "title": "Process running from a deleted binary in a temp directory",
+      "status": "test",
+      "description": "The binary was run from /tmp, /dev/shm or /var/run and then deleted, a bot hiding its file. Matches at any CPU load.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "high",
+      "mitre": [
+        "T1070.004",
+        "T1204.002"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.exe",
+            "regex": [
+              "^/(?:tmp|var/tmp|dev/shm|var/run|run/user/\\d+)/\\S* \\(deleted\\)$"
+            ]
+          }
+        ]
+      },
+      "exceptions": [
+        {
+          "exe_prefix": [
+            "/tmp/go-build"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "PS06-BOT-KNOWN-FAMILY",
+      "title": "Known IoT botnet process or script name",
+      "status": "test",
+      "description": "Names left by Mozi (Mozi.m, Mozi.a), Mirai (dvrHelper) and the Gafgyt bins.sh loader.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "critical",
+      "mitre": [
+        "T1204.002"
+      ],
+      "source": "process",
+      "match": {
+        "any": [
+          {
+            "field": "process.exe",
+            "contains": [
+              "Mozi.m",
+              "Mozi.a",
+              "dvrHelper"
+            ]
+          },
+          {
+            "field": "process.comm",
+            "contains": [
+              "Mozi.m",
+              "Mozi.a",
+              "dvrHelper"
+            ]
+          },
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "Mozi\\.[ma]\\b|\\bdvrHelper\\b|(?:^|[\\s/])bins\\.sh\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS06-BOT-BUSYBOX-PROBE",
+      "title": "busybox called with a random uppercase applet name",
+      "status": "test",
+      "description": "Mirai probes a fresh login with /bin/busybox and a made-up uppercase word to check the shell is real.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "high",
+      "mitre": [
+        "T1059.004"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.cmdline",
+            "regex": [
+              "(?:^|/)busybox\\s+[A-Z]{4,}\\b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PS06-BOT-HIDDEN-TMP-EXE",
+      "title": "Process running from a hidden path in a temp directory",
+      "status": "test",
+      "description": "A binary under a dot-directory or dot-file in /tmp, /var/tmp or /dev/shm.",
+      "author": "pisentry",
+      "category": "PS06",
+      "level": "high",
+      "mitre": [
+        "T1564.001",
+        "T1204.002"
+      ],
+      "source": "process",
+      "match": {
+        "all": [
+          {
+            "field": "process.exe",
+            "regex": [
+              "^/(?:tmp|var/tmp|dev/shm)/(?:[^/]*/)*\\.[^/]+"
+            ]
+          }
+        ]
+      },
+      "exceptions": [
+        {
+          "exe_prefix": [
+            "/tmp/.mount_"
+          ]
+        }
+      ],
+      "falsepositives": [
+        "AppImage mounts (/tmp/.mount_*) are excepted."
+      ]
+    }
+  ]
+}

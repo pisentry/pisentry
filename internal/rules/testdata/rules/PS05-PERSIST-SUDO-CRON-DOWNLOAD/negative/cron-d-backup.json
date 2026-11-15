@@ -1,0 +1,11 @@
+{
+  "source": "log",
+  "log_ident": "sudo",
+  "log_msg": "    pi : TTY=pts/0 ; PWD=/home/pi ; USER=root ; COMMAND=sh -c echo \"0 3 * * * root /usr/local/bin/backup.sh\" > /etc/cron.d/backup",
+  "user": {
+    "name": "pi"
+  },
+  "process": {
+    "cmdline": "sh -c echo \"0 3 * * * root /usr/local/bin/backup.sh\" > /etc/cron.d/backup"
+  }
+}

@@ -385,16 +385,38 @@ func VerifyDir(dir string, keys []ed25519.PublicKey) (*Manifest, error) {
 // Load verifies the signed bundle in dir, if there is one, then loads the
 // built-in rules plus dir as LoadOrDefault does. A bundle that fails
 // verification fails the whole load, like any broken rule file.
-func Load(dir string) (*Engine, *Manifest, error) {
+func Load(dir string, disabledPacks []string) (*Engine, *Manifest, error) {
 	m, err := VerifyDir(dir, TrustedKeys())
 	if err != nil {
 		return nil, nil, err
 	}
-	eng, err := LoadOrDefault(dir)
+	eng, err := LoadOrDefault(dir, disabledPacks)
 	if err != nil {
 		return nil, nil, err
 	}
 	return eng, m, nil
+}
+
+// skipDisabledBundleFiles drops bundle-<pack>.json for every pack named in
+// rules.disabled_packs. A signed bundle carries newer copies of the embedded
+// packs; loading the copy of a disabled pack would bring it back (and the
+// disabled-pack check would then reject the whole of rules.d). The file is
+// still verified against the manifest, it is just not loaded.
+func skipDisabledBundleFiles(files, disabledPacks []string) []string {
+	if len(disabledPacks) == 0 {
+		return files
+	}
+	off := map[string]bool{}
+	for _, p := range disabledPacks {
+		off[BundleFilePrefix+p+".json"] = true
+	}
+	kept := files[:0:0]
+	for _, f := range files {
+		if !off[filepath.Base(f)] {
+			kept = append(kept, f)
+		}
+	}
+	return kept
 }
 
 // readLimited reads a regular file (through symlinks) of at most max bytes.

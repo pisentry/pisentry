@@ -238,22 +238,22 @@ func TestTooManyRuleFiles(t *testing.T) {
 	for i := 0; i <= MaxRuleFiles; i++ {
 		writeFile(t, dir, fmt.Sprintf("%03d.json", i), []byte("{}"))
 	}
-	_, err := LoadOrDefault(dir)
+	_, err := LoadOrDefault(dir, nil)
 	wantErr(t, err, "exceeds limit")
 }
 
 func TestLoadOrDefault(t *testing.T) {
-	if eng, err := LoadOrDefault(""); err != nil || eng != Default() {
+	if eng, err := LoadOrDefault("", nil); err != nil || eng != Default() {
 		t.Fatalf("empty dir setting: %v", err)
 	}
-	if eng, err := LoadOrDefault(filepath.Join(t.TempDir(), "missing")); err != nil || eng != Default() {
+	if eng, err := LoadOrDefault(filepath.Join(t.TempDir(), "missing"), nil); err != nil || eng != Default() {
 		t.Fatalf("missing dir should fall back to defaults: %v", err)
 	}
-	if eng, err := LoadOrDefault(t.TempDir()); err != nil || eng != Default() {
+	if eng, err := LoadOrDefault(t.TempDir(), nil); err != nil || eng != Default() {
 		t.Fatalf("empty dir should fall back to defaults: %v", err)
 	}
 	notDir := writeFile(t, t.TempDir(), "file", []byte("x"))
-	if _, err := LoadOrDefault(notDir); err == nil {
+	if _, err := LoadOrDefault(notDir, nil); err == nil {
 		t.Error("rules.dir pointing at a file: want error")
 	}
 
@@ -279,7 +279,7 @@ func TestLoadOrDefault(t *testing.T) {
 		"rules":          []any{override, extra},
 	})
 	writeFile(t, dir, "local.json", b)
-	eng, err := LoadOrDefault(dir)
+	eng, err := LoadOrDefault(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestLoadOrDefault(t *testing.T) {
 	// A duplicate inside rules.d is an error even though overriding a
 	// built-in is allowed.
 	writeFile(t, dir, "local2.json", bundleJSON(t, extra))
-	_, err = LoadOrDefault(dir)
+	_, err = LoadOrDefault(dir, nil)
 	wantErr(t, err, "duplicate rule id")
 }
 

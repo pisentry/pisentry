@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "chisel",
+    "exe": "/usr/local/bin/chisel",
+    "cmdline": "chisel client 10.0.0.1:8000 3000:localhost:3000",
+    "uid": 1000
+  },
+  "parent_comm": "bash"
+}
