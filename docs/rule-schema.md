@@ -148,6 +148,117 @@ The new set is compiled and validated in the background and swapped in atomicall
 
 Rules and most catalog lists take effect on the next scan. `fim_watches` is read when the FIM detector starts, so a change to it needs a restart.
 
+## Signed bundles
+
+Rule updates between releases ship as a signed bundle. `pisentry update-patterns` installs one into `rules.d`. A signature alone does not stop a rollback: anyone who can serve an old, validly signed bundle could remove a newer rule. So the manifest also carries a version that only goes up and an expiry, and the agent enforces both.
+
+A bundle is three kinds of file, with the same names on the download server, in `rules.d` and in a ConfigMap:
+
+| File | Content |
+|---|---|
+| `bundle.manifest` | JSON manifest, below |
+| `bundle.sig` | `{"key_id": "...", "signature": "<base64>"}`, an Ed25519 signature over the manifest bytes |
+| `bundle-*.json` | Rule files, the same format as any file in `rules.d` |
+
+```json
+{
+  "schema_version": 1,
+  "version": 202611151200,
+  "created": "2026-11-15T12:00:00Z",
+  "expires": "2027-02-13T12:00:00Z",
+  "min_agent_version": "v0.2.2",
+  "files": [
+    { "name": "bundle-ssh.json", "sha256": "1dbd4f8a...", "size": 165 }
+  ]
+}
+```
+
+The loader skips `bundle.manifest` and `bundle.sig` (they do not end in `.json`) and loads `bundle-*.json` like any other file. `bundle-*.json` names in `rules.d` belong to the updater: it removes the ones a new manifest no longer lists. Keep your own files under other names.
+
+The release bundle carries newer copies of the built-in packs, one file each (`bundle-reverse-shells.json` and so on). A rule in it with a built-in ID replaces the built-in rule. For a pack named in `rules.disabled_packs`, its bundle file is still verified but not loaded, so the pack stays off.
+
+### pisentry update-patterns
+
+```bash
+sudo pisentry update-patterns                       # latest release, into rules.dir, then SIGHUP the agent
+sudo pisentry update-patterns -url https://mirror.example/pisentry/ -rules /etc/pisentry/rules.d
+pisentry update-patterns -rules ./rules.d -no-reload   # fill a directory for GitOps, no agent involved
+```
+
+It downloads `bundle.manifest` and `bundle.sig` from `-url` (HTTPS only, default `https://github.com/pisentry/pisentry/releases/latest/download/`), then checks, in this order:
+
+1. the signature verifies with a key embedded in the binary, found by `key_id`,
+2. `expires` is in the future,
+3. `version` is higher than the version of the manifest in `rules.d` (the same version is "already installed", exit 0),
+4. this agent is at least `min_agent_version` (development builds skip this),
+5. every file matches its SHA-256 and size, and passes the same validation as `pisentry check`.
+
+Only then does it write. Each file goes to a temporary dotfile, is synced and renamed into place, the manifest last. It then sends SIGHUP to any running `pisentry run`. Without the signal, the agent still sees the change within `rules.reload_interval`. Any failed check exits 1 and leaves `rules.d` as it was: an unsigned bundle, an unknown key, a bad signature, a tampered file, an older version or an expired manifest.
+
+Run it from cron or a systemd timer, for example daily:
+
+```
+17 4 * * * root /usr/local/bin/pisentry update-patterns
+```
+
+### What the agent checks
+
+On every load, at start and on each reload, the agent verifies a `bundle.manifest` in `rules.d`: the signature and the hash of every listed file. A failure is handled like any broken rule file. On a reload the previous set stays active and a High PS00 event names the problem. At start the agent runs on the built-in rules. An expired manifest still loads, because it was verified and dropping it would drop rules, but the agent logs a warning. `pisentry_rules_bundle_version` shows the version in the active set, or 0 when no bundle is installed.
+
+`pisentry check` runs all of the update checks except the version comparison against a bundle in the checked directory, so a CI job can gate on it.
+
+### Kubernetes
+
+Do not run `update-patterns` in the pod. The pod's `rules.d` is a read-only ConfigMap mount, and an agent that fetches its own rules is one more thing that can be tampered with. Deliver the bundle through GitOps and let the agent only verify:
+
+1. In CI or on a workstation, fetch and check the bundle into the repository:
+
+   ```bash
+   pisentry update-patterns -rules deploy/kubernetes/rules.d -no-reload
+   pisentry check -rules deploy/kubernetes/rules.d
+   ```
+
+2. Commit the directory and generate a ConfigMap from it, for example with Kustomize:
+
+   ```yaml
+   configMapGenerator:
+     - name: pisentry-rules
+       namespace: pisentry
+       files:
+         - rules.d/bundle.manifest
+         - rules.d/bundle.sig
+         - rules.d/bundle-ssh.json
+   ```
+
+3. Mount it in the DaemonSet at its own path, not under the `/etc/pisentry` config mount, and point `rules.dir` (or `PISENTRY_RULES_DIR`) at it, for example `/etc/pisentry-rules`.
+
+The agent verifies the signature and hashes on every reload, so a ConfigMap edited by hand, or half-synced, is rejected and the previous rules stay active. Review the version in the pull request: the agent cannot see a rollback in Git history. `pisentry check` fails on an expired manifest, so a pipeline that runs it catches a stale bundle.
+
+### Keys
+
+Two Ed25519 public keys are embedded in `internal/rules/bundle.go`: the current signing key and the next one. A key ID is the first 8 bytes of the SHA-256 of the public key, in hex, so it cannot point at the wrong key. A bundle signed with any other key is rejected.
+
+To rotate: start signing with the next key (both are already trusted by every agent), then release a build that embeds the next key as current and a new next key. Agents that have not upgraded keep accepting bundles, because they trust the key now in use.
+
+### One-time setup for maintainers
+
+The release workflow signs `deploy/rules/packs/*.json` in the `rules-bundle` job and attaches the bundle to the GitHub release. The private key never leaves the `rules-signing` environment, and the job waits for a reviewer.
+
+1. On a trusted machine, make the two keys:
+
+   ```bash
+   go run ./cmd/pisentry-bundle keygen -out current.key
+   go run ./cmd/pisentry-bundle keygen -out next.key
+   ```
+
+   Each prints its public key and key ID.
+2. Put both public keys into `trustedKeys` in `internal/rules/bundle.go` (current first) and merge that before the next release tag.
+3. In the repository settings, under Environments, create `rules-signing`. Add yourself or another maintainer as a required reviewer, and limit deployment branches and tags to `v*` tags.
+4. Add an environment secret `RULES_SIGNING_KEY` with the content of `current.key`.
+5. Store `next.key` offline, for example in a password manager, and delete both key files from the machine.
+
+The job verifies the signed bundle with the keys embedded in the release before attaching it. If the secret does not match an embedded key, the job fails and nothing is published. Bundles expire after 90 days. To refresh the latest release without new rules, re-run its `rules-bundle` job: the same files are signed with a newer version and a new expiry.
+
 ## Fixtures
 
 Every built-in rule has recorded inputs under `internal/rules/testdata/rules/<rule-id>/`:
