@@ -47,7 +47,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 # PrivateTmp and PrivateDevices are deliberately OFF: pisentry needs to see the
 # real /tmp and /dev/shm, which is exactly where droppers and miners live.
 
-# Stay out of the way on a 2 GB Pi. The process itself stays near 12 MB;
+# Stay out of the way on a 2 GB Pi. The process itself uses 10-30 MiB;
 # MemoryMax also counts the kernel's dentry/inode cache from the SUID and
 # FIM walks, so it leaves room for that instead of reclaiming in a loop.
 Nice=10
