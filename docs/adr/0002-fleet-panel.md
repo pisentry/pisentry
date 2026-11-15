@@ -13,12 +13,22 @@ For pisentry that design has one problem. The agent runs as root on every host. 
 
 ## Decision
 
-### Two products
+### Two programs, one repo
 
-- **pisentry**, the agent, stays in this repo and keeps its rules: one static binary, Go standard library only, no web UI and no listener beyond `/metrics`.
-- **pisentry-panel** lives in a new repo, `pisentry/panel`. It is one Go binary with the web UI and SQLite embedded (pure Go driver, no cgo), so it runs on a Pi and installs like the agent. It ships as a release binary, a Docker image and a k3s manifest. It may use third-party modules; the agent may not.
+- **pisentry**, the agent, keeps its rules: one static binary, Go standard library only, no web UI and no listener beyond `/metrics`.
+- **pisentry-panel** lives in `panel/` in this repo as its own Go module. It is one binary with the web UI and SQLite embedded (pure Go driver, no cgo), so it runs on a Pi. It may use third-party modules; the agent module may not, and nothing in the agent imports the panel.
 
-Event Schema v1 is the only contract between them.
+Both ship in the same release with the same version. Event Schema v1 is the only contract between them.
+
+### What the panel is for
+
+The panel answers one question: is anything attacking my Pis? It shows hosts, quiet agents, the Top 10 and events. It does not deploy apps, run backups, manage packages or open a shell. Tools like ServerOS already run servers; pisentry should sit next to them, not copy them.
+
+### Install
+
+The panel is what people download. On the first Pi, `install.sh --panel` installs the panel and an agent, and connects the agent to the panel over loopback. To add another Pi, "Add a Pi" in the panel shows a one-line command with a fresh token. Running it on that Pi installs the agent and points it at the panel.
+
+The panel never logs into a Pi to install or change anything. That would mean storing SSH keys or passwords, which is the control channel this ADR rules out. One pasted command per Pi is the cost.
 
 ### Agents push, the panel receives
 
@@ -41,7 +51,7 @@ The agent sends events and heartbeats through the durable outbox (#67) to the pa
 
 ### Auth
 
-- **Agents:** the panel issues a token per host from "Add host", shown once as an install command (`install.sh --panel URL --panel-token TOKEN`). The panel stores only a SHA-256 of it. Rotation issues a second token and accepts both for 24 hours. Deleting the host revokes it. HTTPS is required unless the panel URL is loopback. Mutual TLS can come later without changing the agent's output.
+- **Agents:** the panel issues a token per host from "Add a Pi", shown once inside the install command (`install.sh --panel-url URL --panel-token TOKEN`). The panel stores only a SHA-256 of it. Rotation issues a second token and accepts both for 24 hours. Deleting the host revokes it. HTTPS is required unless the panel URL is loopback. Mutual TLS can come later without changing the agent's output.
 - **People:** local accounts with hashed passwords, and TOTP before 1.0.
 - **MCP clients:** per-user API tokens, read-only.
 
@@ -79,20 +89,22 @@ Within v1, fields are only added. Consumers ignore fields they don't know. Remov
 
 ### Deployment
 
-The panel listens on one HTTPS port (8443 by default) for ingest, the UI and `/mcp`, using a certificate you give it or plain HTTP on loopback behind a reverse proxy. The agent gains a `panel` output and the two `install.sh` flags, nothing else.
+The panel listens on one HTTPS port (8443 by default) for ingest, the UI and `/mcp`, using a certificate you give it or plain HTTP on loopback behind a reverse proxy. The agent gains a `panel` output, nothing else. The panel also ships as a Docker image for people who run it off the Pis.
 
 ## Rejected options
 
 - **A control panel like ServerOS**, where the panel sends commands to agents. Taking the panel would mean root on every host.
 - **Panel MCP tools that relay fixes to agents.** The same control channel under another name.
 - **An MCP listener on the agent.** New network attack surface on a root process, when stdio over ssh already reaches it.
-- **The panel inside the agent binary, or a second binary in this repo.** The agent would carry web UI code, or this module would need dependencies the agent must not have.
+- **The panel inside the agent binary.** The agent would carry web UI code and dependencies.
+- **A separate `pisentry/panel` repo.** Cleaner on paper, but the panel is the thing people download, and two repos mean two READMEs, two release streams and two version numbers to keep in step.
+- **The panel installing agents over SSH.** It would have to hold credentials for every Pi.
 - **JSON files instead of SQLite.** Fine for one host, but fleet queries by time and category need indexes.
 
 ## Consequences
 
 - Fixes need a person or an assistant on the host. That is slower than clicking in the panel, and it is the point.
-- The panel is a second product to release, with its own versions and security reports.
+- Releases carry a second binary and a Docker image, and CI builds a web UI.
 - Event Schema v1 becomes a public contract and needs the versioning rules above.
 - The panel can't confirm a fix worked until the host's next heartbeat or event.
 
@@ -100,5 +112,5 @@ The panel listens on one HTTPS port (8443 by default) for ingest, the UI and `/m
 
 - CLI fix commands, `pisentry exception add` and `pisentry pack on|off` (#74, v0.3.0)
 - `pisentry mcp` with read tools and typed fixes (#75, v0.3.0)
-- The agent's `panel` output, heartbeats and `install.sh --panel` / `--panel-token` (#76, v0.3.1)
-- `pisentry/panel` v0.1: ingest, host list with quiet hosts, fleet Top 10, event browser, accounts, read-only `/mcp`, Docker image (#77, v0.3.1)
+- The agent's `panel` output and heartbeats, and `install.sh --panel` / `--panel-url` / `--panel-token` (#76, v0.3.1)
+- Panel v0.1 in `panel/`: ingest, "Add a Pi", host list with quiet hosts, fleet Top 10, event browser, accounts, read-only `/mcp`, Docker image (#77, v0.3.1)
