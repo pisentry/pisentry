@@ -18,8 +18,9 @@ import (
 // success: a broken file keeps the previous set, so the agent never runs with
 // zero rules.
 type Live struct {
-	dir string
-	cur atomic.Pointer[Engine]
+	dir      string
+	disabled []string // rules.disabled_packs
+	cur      atomic.Pointer[Engine]
 
 	mu   sync.Mutex // serializes reloads and guards seen
 	seen string     // fingerprint of dir at the last reload attempt
@@ -27,8 +28,8 @@ type Live struct {
 
 // NewLive wraps an already loaded engine. initial must not be nil; pass
 // Default() when the first load failed.
-func NewLive(dir string, initial *Engine) *Live {
-	l := &Live{dir: dir}
+func NewLive(dir string, disabledPacks []string, initial *Engine) *Live {
+	l := &Live{dir: dir, disabled: disabledPacks}
 	l.cur.Store(initial)
 	l.seen, _ = Fingerprint(dir)
 	return l
@@ -46,7 +47,7 @@ func (l *Live) Reload() (*Engine, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.seen, _ = Fingerprint(l.dir)
-	eng, err := LoadOrDefault(l.dir)
+	eng, err := LoadOrDefault(l.dir, l.disabled)
 	if err != nil {
 		return l.cur.Load(), err
 	}

@@ -345,9 +345,45 @@ func TestUsesField(t *testing.T) {
 	if nilEng.UsesField(SourceProcess, "process.comm") {
 		t.Error("nil engine reported a field")
 	}
-	// ProcWatch reads uid and parent comm for every process when a rule
-	// matches on them; the defaults should not force that cost.
-	if Default().UsesField(SourceProcess, "process.parent_comm") || Default().UsesField(SourceProcess, "process.uid") {
-		t.Error("default process rules match on parent_comm or uid")
+}
+
+// Candidates is the cheap first pass of the process scan: conditions on the
+// deferred fields count as met, everything else is evaluated for real.
+func TestCandidates(t *testing.T) {
+	eng, err := NewEngineFromBytes("t.json", bundleJSON(t, map[string]any{
+		"id": "T-WEB", "title": "t", "category": "PS08", "source": "process",
+		"match": map[string]any{"all": []any{
+			map[string]any{"field": "process.comm", "equals": []any{"sh"}},
+			map[string]any{"field": "process.parent_comm", "equals": []any{"nginx"}},
+		}},
+		"exceptions": []any{map[string]any{"uids": []any{0}}},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deferred := []string{"process.uid", "process.parent_comm"}
+	sh := &EvalInput{Source: SourceProcess, Process: event.ProcessEntity{Comm: "sh"}}
+	if len(eng.Candidates(sh, deferred...)) != 1 {
+		t.Error("shell with unknown parent should be a candidate")
+	}
+	if len(eng.Eval(sh)) != 0 {
+		t.Error("Eval matched without the parent")
+	}
+	if len(eng.Candidates(&EvalInput{Source: SourceProcess, Process: event.ProcessEntity{Comm: "sshd"}}, deferred...)) != 0 {
+		t.Error("non-shell is a candidate")
+	}
+	if len(eng.Candidates(sh)) != 0 {
+		t.Error("with nothing deferred, Candidates must evaluate parent_comm")
+	}
+	if len(eng.Candidates(&EvalInput{Source: SourceLog, Process: event.ProcessEntity{Comm: "sh"}}, deferred...)) != 0 {
+		t.Error("candidate for a source with no rules")
+	}
+	sh.ParentComm = "nginx"
+	if len(eng.Eval(sh)) != 1 || len(EvalAmong(sh, eng.Candidates(sh))) != 1 {
+		t.Error("Eval or EvalAmong missed the full match")
+	}
+	var nilEng *Engine
+	if nilEng.Candidates(sh) != nil {
+		t.Error("nil engine reported a candidate")
 	}
 }

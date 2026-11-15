@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "openssl",
+    "exe": "/usr/bin/openssl",
+    "cmdline": "openssl s_client -connect example.com:443 -servername example.com",
+    "uid": 1000
+  },
+  "parent_comm": "bash"
+}

@@ -7,7 +7,8 @@
   },
   "rules": {
     "dir": "/etc/pisentry/rules.d",
-    "reload_interval": "10s"
+    "reload_interval": "10s",
+    "disabled_packs": []
   },
   "ssh": {
     "fail_threshold": 5,

