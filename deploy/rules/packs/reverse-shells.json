@@ -87,8 +87,8 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "(?:^|[\\s/])(?:nc|ncat|netcat|nc\\.traditional)\\s(?:.*\\s)?-[a-zA-Z]*[ec]\\s+\\S",
-              "(?:^|[\\s/])ncat\\s(?:.*\\s)?--(?:sh-)?exec\\b"
+              "(?:^|[\\s/])(?:nc|ncat|netcat|nc\\.traditional)\\s(?:[^|;&]*\\s)?-[a-zA-Z]*[ec]\\s+\\S",
+              "(?:^|[\\s/])ncat\\s(?:[^|;&]*\\s)?--(?:sh-)?exec\\b"
             ]
           }
         ]

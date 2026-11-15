@@ -95,7 +95,7 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "(?:\\btruncate\\s+-s\\s*0\\s+|\\bshred\\b(?:\\s+-\\S+)*\\s+|\\brm\\s+(?:-\\S+\\s+)*|>\\s*|\\bcp\\s+/dev/null\\s+|\\bln\\s+-sf\\s+/dev/null\\s+)/var/log/(?:auth\\.log|secure|syslog|messages|wtmp|btmp|lastlog|kern\\.log)(?:\\s|$)",
+              "(?:\\btruncate\\s+-s\\s*0\\s+|\\bshred\\b(?:\\s+-\\S+)*\\s+|\\brm\\s+(?:-\\S+\\s+)*|(?:^|[^>])>\\s*|\\bcp\\s+/dev/null\\s+|\\bln\\s+-sf\\s+/dev/null\\s+)/var/log/(?:auth\\.log|secure|syslog|messages|wtmp|btmp|lastlog|kern\\.log)(?:\\s|$)",
               "\\bjournalctl\\b.*--vacuum-(?:time=[1-9]s|size=[1-9][KM]?)(?:\\s|$)"
             ]
           }

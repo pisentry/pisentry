@@ -94,13 +94,13 @@ To add an exception to a built-in rule, copy the rule into `rules.d` with the sa
 
 Curated rules ship as packs next to `default.json`, embedded in the binary and on by default:
 
-| Pack | Rules | Covers |
-|---|---|---|
-| `reverse-shells` | 21 | `/dev/tcp`, netcat `-e`, mkfifo relays, socat exec, Python, Perl, PHP, Ruby, Lua, awk, Node and openssl shells, TTY upgrades, shells under a web server, and outbound tunnels (`ssh -R`, chisel, gsocket, ngrok, frp). PS08 |
-| `privesc-gtfobins` | 20 | sudo escapes through find, vim, tar, env, capsh, awk, interpreters, zip, rsync, ssh, apt, nmap, gdb, script and wrapper programs; containers with the host root mounted; root shells escaped from a pager; `sh -p` from a setuid parent. PS04 |
-| `persistence-linux` | 14 | sudo writes to authorized_keys, PAM modules and stacks, systemd generators and units in temp directories, timers, cron download-and-run, shell profiles, udev `RUN+=`, `insmod` from temp directories, NOPASSWD sudoers, service accounts given a shell, rc.local and motd scripts. PS05 |
-| `iot-botnets` | 8 | Mirai and Gafgyt dropper chains, busybox tftp and ftpget, architecture-named binaries and deleted or hidden binaries in temp directories, known family names, busybox probe words. PS06, since the Top 10 has no separate malware category yet |
-| `defense-evasion` | 7 | Firewall flushes, stopped security agents (pisentry included), wiped auth logs and journals, erased shell history, timestomping, AppArmor or SELinux off, ASLR and ptrace protections off. PS03 and PS10 |
+| Pack | Rules | Covers | Top 10 |
+|---|---|---|---|
+| `reverse-shells` | 21 | `/dev/tcp`, netcat `-e`, mkfifo relays, socat exec, Python, Perl, PHP, Ruby, Lua, awk, Node and openssl shells, TTY upgrades, shells under a web server, and outbound tunnels (`ssh -R`, chisel, gsocket, ngrok, frp). | PS08 |
+| `privesc-gtfobins` | 20 | sudo escapes through find, vim, tar, env, capsh, awk, interpreters, zip, rsync, ssh, apt, nmap, gdb, script and wrapper programs; containers with the host root mounted; root shells escaped from a pager; `sh -p` from a setuid parent. | PS04 |
+| `persistence-linux` | 14 | sudo writes to authorized_keys, PAM modules and stacks, systemd generators and units in temp directories, timers, cron download-and-run, shell profiles, udev `RUN+=`, `insmod` from temp directories, NOPASSWD sudoers, service accounts given a shell, rc.local and motd scripts. | PS05 |
+| `iot-botnets` | 8 | Mirai and Gafgyt dropper chains, busybox tftp and ftpget, architecture-named binaries and deleted or hidden binaries in temp directories, known family names, busybox probe words. | PS06 (the Top 10 has no separate malware category yet) |
+| `defense-evasion` | 7 | Firewall flushes, stopped security agents (pisentry included), wiped auth logs and journals, erased shell history, timestomping, AppArmor or SELinux off, ASLR and ptrace protections off. | PS03, PS10 |
 
 `pisentry check` lists the packs and whether each is on. To turn one off:
 
@@ -108,19 +108,23 @@ Curated rules ship as packs next to `default.json`, embedded in the binary and o
 { "rules": { "disabled_packs": ["iot-botnets"] } }
 ```
 
-An unknown pack name is an error. To change one rule instead, copy it into `rules.d` with the same `id`, the same as for `default.json` rules. Packs hold rules only; catalog lists stay in `default.json`.
+An unknown pack name stops the agent from starting, and `pisentry check` reports it. To change one rule instead, copy it into `rules.d` with the same `id`, as with `default.json` rules. That doesn't work for a rule in a disabled pack: the copy would quietly bring part of the pack back, so it is rejected. Give it a new `id` to keep it. Packs hold rules only; catalog lists stay in `default.json`.
 
-What the packs cannot see: pisentry reads the process table every 15 seconds and sudo commands from the auth log. A process that exits between scans, keystrokes inside an interactive program (a `!sh` typed in `less` is only seen through the shell it starts), and file changes without a sudo command (FIM covers those) are outside what these rules match. New rules start as `"status": "test"` and move to `stable` after a day on real hosts with no High or Critical false positives.
+Pack rules match on two sources: the process table, which pisentry reads every 15 seconds, and sudo commands from the auth log. They cannot see a process that exits between scans, keystrokes inside an interactive program (a `!sh` typed in `less` is only seen through the shell it starts) or file changes without a sudo command (FIM covers those).
 
-### SigmaHQ
+PS06 events from rules without the resource hijacking technique (T1496), such as the `iot-botnets` pack, are titled "Suspicious process"; mining rules keep "Possible cryptominer". When several PS06 rules match one process, the event carries the highest level among them.
 
-SigmaHQ's `rules/linux/process_creation` was evaluated as a source for packs and not imported for now:
+New rules start as `"status": "test"` and move to `stable` after a day on real hosts with no High or Critical false positives.
 
-- They are written for a feed of every process start (auditd, Sysmon for Linux or eBPF). Many match short commands such as discovery tools or one-shot downloads, which a 15-second snapshot rarely catches, so they would load and seldom fire. Fields such as `ParentImage` beyond the parent's name and `CurrentDirectory` have no equivalent yet.
-- They are YAML, and the agent has no YAML parser on purpose. Import would be an offline converter that writes Rule Schema v1 JSON, kept out of the agent.
-- They are under the Detection Rule License 1.1: a converted rule must keep `author`, link the source in `references`, and name the author in the alerts it produces. Event Schema v1 carries `rule.id` and `rule.title` but not an author yet.
+### Why SigmaHQ rules are not imported yet
 
-Revisit once real-time exec events (#16) give every process start.
+SigmaHQ's `rules/linux/process_creation` was evaluated as a source for packs and not imported:
+
+- The rules are written for a feed of every process start (auditd, Sysmon for Linux or eBPF). Many match short commands such as discovery tools or one-shot downloads, which a 15-second snapshot rarely catches, so they would load and seldom fire. Some fields have no equivalent yet: `CurrentDirectory`, and `ParentImage` beyond the parent's name.
+- They are YAML, and the agent has no YAML parser on purpose. Importing them would take an offline converter that writes Rule Schema v1 JSON, kept out of the agent.
+- They are under the Detection Rule License 1.1: a converted rule must keep `author`, link the source in `references` and name the author in the alerts it produces. Event Schema v1 carries `rule.id` and `rule.title` but not an author yet.
+
+To be revisited once real-time exec events (#16) give every process start.
 
 ## Validating
 

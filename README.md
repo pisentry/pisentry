@@ -149,7 +149,7 @@ pisentry categories                                 print the Top 10 catalog
 
 ## Custom rules, reloaded live
 
-80 rules ship in the binary: the defaults plus five packs for reverse shells, GTFOBins privilege escalation, Linux persistence, IoT botnets and defense evasion, each with a MITRE technique and fixtures it must and must not fire on. Turn a pack off with `rules.disabled_packs` ([packs](docs/rule-schema.md#rule-packs)).
+80 rules ship in the binary: the defaults plus five packs for reverse shells, GTFOBins privilege escalation, Linux persistence, IoT botnets and defense evasion. Each rule has a MITRE technique and fixtures it must and must not fire on. Turn a pack off with `rules.disabled_packs` (see [Rule packs](docs/rule-schema.md#rule-packs)).
 
 Drop a JSON bundle in `/etc/pisentry/rules.d/` ([Rule Schema v1](docs/rule-schema.md)) and the running agent picks it up within `rules.reload_interval` (10s), or right away on `sudo systemctl reload pisentry` (SIGHUP). No restart, no lost state.
 

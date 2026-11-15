@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -151,14 +152,23 @@ func (p *ProcWatch) Scan() error {
 		// Process rules: PS06 miner names and pool command lines ship in the
 		// defaults, other categories come from rule packs and rules.d.
 		// proc.miner_names in the config is still honoured as an extra list.
+		// PS06 hits share one event per process, so report the worst of
+		// them; a High rule earlier in the file must not hide a Critical one.
 		minerHit := false
+		var worst *rules.Rule
 		for _, hit := range p.matchProcessRules(rs, pid, st, exe, cmd) {
-			if hit.Category == event.Cryptominer {
-				p.emitMiner(id, hit.Level, pid, st, exe, cmd, cpu, hit.Title, &hit)
-				minerHit = true
-			} else {
+			if hit.Category != event.Cryptominer {
 				p.emitRule(id, pid, st, exe, cmd, hit)
+				continue
 			}
+			if worst == nil || hit.Level > worst.Level {
+				h := hit
+				worst = &h
+			}
+		}
+		if worst != nil {
+			p.emitMiner(id, worst.Level, pid, st, exe, cmd, cpu, worst.Title, worst)
+			minerHit = true
 		}
 		if !minerHit {
 			if name := matchesAny(comm+" "+filepath.Base(exe), cfg.Proc.MinerNames); name != "" {
@@ -207,14 +217,15 @@ func (p *ProcWatch) matchProcessRules(rs *rules.Engine, pid int, st procfs.Proc,
 		Source:  rules.SourceProcess,
 		Process: event.ProcessEntity{PID: pid, PPID: st.PPID, Comm: st.Comm, Exe: exe, Cmdline: cmd},
 	}
-	if !rs.MayMatch(in, "process.uid", "process.parent_comm") {
+	cands := rs.Candidates(in, "process.uid", "process.parent_comm")
+	if len(cands) == 0 {
 		return nil
 	}
 	if uid := procfs.UID(p.d.Cfg.ProcRoot, pid); uid >= 0 {
 		in.Process.UID = event.IntPtr(uid)
 	}
 	in.ParentComm = parentComm(p.d.Cfg.ProcRoot, st.PPID)
-	return rs.Eval(in)
+	return rules.EvalAmong(in, cands)
 }
 
 func (p *ProcWatch) stratumConn(nc *netCache, pid int) (int, string) {
@@ -302,7 +313,7 @@ func (p *ProcWatch) emitMiner(id string, sev event.Severity, pid int, st procfs.
 	truncCmd := engine.Truncate(cmd, 300)
 	ev := event.Event{
 		Category: event.Cryptominer, Severity: sev, Detector: "proc", Key: id,
-		Summary: fmt.Sprintf("Possible cryptominer %s (pid %d): %s", st.Comm, pid, why),
+		Summary: fmt.Sprintf("%s %s (pid %d): %s", minerLabel(hit), st.Comm, pid, why),
 		Process: &event.ProcessEntity{
 			PID: pid, PPID: st.PPID, StartTime: st.StartTime, UID: uidPtr,
 			Comm: st.Comm, Exe: exe, Cmdline: truncCmd,
@@ -352,4 +363,14 @@ func (p *ProcWatch) emitRule(id string, pid int, st procfs.Proc, exe, cmd string
 			"uid": strconv.Itoa(uid), "rule": hit.ID,
 		},
 	})
+}
+
+// minerLabel names a PS06 event. PS06 also carries rules that are not about
+// mining, such as the IoT botnet pack; only resource hijacking (T1496) or the
+// built-in heuristics are called a cryptominer.
+func minerLabel(hit *rules.Rule) string {
+	if hit == nil || slices.Contains(hit.MITRE, "T1496") {
+		return "Possible cryptominer"
+	}
+	return "Suspicious process"
 }

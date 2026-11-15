@@ -112,4 +112,27 @@ func TestDisabledPacks(t *testing.T) {
 	if _, ok := eng.RuleByID(victim.Rules[0].Rule.ID); ok {
 		t.Error("disabled pack came back after a rules.d overlay")
 	}
+
+	// Overriding a rule from a disabled pack would quietly re-enable it.
+	revive := t.TempDir()
+	writeFile(t, revive, "override.json", []byte(`{"schema_version":1,"rules":[{"id":"`+victim.Rules[0].Rule.ID+`","title":"t","category":"PS04","source":"log","match":{"all":[{"field":"log.ident","equals":["sudo"]}]}}]}`))
+	if _, err := LoadOrDefault(revive, []string{victim.Name}); err == nil || !strings.Contains(err.Error(), "disabled pack") {
+		t.Errorf("override of a disabled pack's rule: %v", err)
+	}
+	if _, err := LoadOrDefault(revive, nil); err != nil {
+		t.Errorf("override with the pack on should load: %v", err)
+	}
+
+	states, err := PackStates([]string{victim.Name})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, st := range states {
+		if st.Enabled == (st.Name == victim.Name) {
+			t.Errorf("pack %s enabled=%v", st.Name, st.Enabled)
+		}
+	}
+	if _, err := PackStates([]string{"no-such-pack"}); err == nil {
+		t.Error("PackStates accepted an unknown pack")
+	}
 }

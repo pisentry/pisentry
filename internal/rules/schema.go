@@ -441,25 +441,37 @@ func (e *Engine) UsesField(src Source, field string) bool {
 	return false
 }
 
-// MayMatch reports whether some rule for in.Source could match in once the
+// Candidates returns the rules for in.Source that could match in once the
 // deferred fields are filled in. A condition on a deferred field counts as
-// met and exceptions are skipped, so false is exact and true means "read the
-// deferred fields, then call Eval". The process scan uses it to read the uid
-// and parent comm only for processes that are already candidates.
-func (e *Engine) MayMatch(in *EvalInput, deferred ...string) bool {
+// met and exceptions are skipped, so a rule left out cannot match. The
+// process scan uses it to read the uid and parent comm only for candidate
+// processes, then runs just the candidates with EvalAmong.
+func (e *Engine) Candidates(in *EvalInput, deferred ...string) []*CompiledRule {
 	if e == nil {
-		return false
+		return nil
 	}
-	candidates := e.rules
+	pool := e.rules
 	if in.Source != "" {
-		candidates = e.bySrc[in.Source]
+		pool = e.bySrc[in.Source]
 	}
-	for _, cr := range candidates {
+	var out []*CompiledRule
+	for _, cr := range pool {
 		if cr.mayMatch(in, deferred) {
-			return true
+			out = append(out, cr)
 		}
 	}
-	return false
+	return out
+}
+
+// EvalAmong returns the rules in crs that fully match in.
+func EvalAmong(in *EvalInput, crs []*CompiledRule) []Rule {
+	var out []Rule
+	for _, cr := range crs {
+		if cr.Match(in) {
+			out = append(out, cr.Rule)
+		}
+	}
+	return out
 }
 
 func (cr *CompiledRule) mayMatch(in *EvalInput, deferred []string) bool {

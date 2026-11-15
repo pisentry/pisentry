@@ -347,9 +347,9 @@ func TestUsesField(t *testing.T) {
 	}
 }
 
-// MayMatch is the cheap first pass of the process scan: conditions on the
+// Candidates is the cheap first pass of the process scan: conditions on the
 // deferred fields count as met, everything else is evaluated for real.
-func TestMayMatch(t *testing.T) {
+func TestCandidates(t *testing.T) {
 	eng, err := NewEngineFromBytes("t.json", bundleJSON(t, map[string]any{
 		"id": "T-WEB", "title": "t", "category": "PS08", "source": "process",
 		"match": map[string]any{"all": []any{
@@ -363,27 +363,27 @@ func TestMayMatch(t *testing.T) {
 	}
 	deferred := []string{"process.uid", "process.parent_comm"}
 	sh := &EvalInput{Source: SourceProcess, Process: event.ProcessEntity{Comm: "sh"}}
-	if !eng.MayMatch(sh, deferred...) {
+	if len(eng.Candidates(sh, deferred...)) != 1 {
 		t.Error("shell with unknown parent should be a candidate")
 	}
 	if len(eng.Eval(sh)) != 0 {
 		t.Error("Eval matched without the parent")
 	}
-	if eng.MayMatch(&EvalInput{Source: SourceProcess, Process: event.ProcessEntity{Comm: "sshd"}}, deferred...) {
+	if len(eng.Candidates(&EvalInput{Source: SourceProcess, Process: event.ProcessEntity{Comm: "sshd"}}, deferred...)) != 0 {
 		t.Error("non-shell is a candidate")
 	}
-	if eng.MayMatch(sh) {
-		t.Error("with nothing deferred, MayMatch must evaluate parent_comm")
+	if len(eng.Candidates(sh)) != 0 {
+		t.Error("with nothing deferred, Candidates must evaluate parent_comm")
 	}
-	if eng.MayMatch(&EvalInput{Source: SourceLog, Process: event.ProcessEntity{Comm: "sh"}}, deferred...) {
+	if len(eng.Candidates(&EvalInput{Source: SourceLog, Process: event.ProcessEntity{Comm: "sh"}}, deferred...)) != 0 {
 		t.Error("candidate for a source with no rules")
 	}
 	sh.ParentComm = "nginx"
-	if len(eng.Eval(sh)) != 1 {
-		t.Error("Eval missed the full match")
+	if len(eng.Eval(sh)) != 1 || len(EvalAmong(sh, eng.Candidates(sh))) != 1 {
+		t.Error("Eval or EvalAmong missed the full match")
 	}
 	var nilEng *Engine
-	if nilEng.MayMatch(sh) {
+	if nilEng.Candidates(sh) != nil {
 		t.Error("nil engine reported a candidate")
 	}
 }

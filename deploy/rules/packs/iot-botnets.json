@@ -183,11 +183,8 @@
           },
           {
             "field": "process.cmdline",
-            "contains": [
-              "Mozi.m",
-              "Mozi.a",
-              "dvrHelper",
-              "bins.sh"
+            "regex": [
+              "Mozi\\.[ma]\\b|\\bdvrHelper\\b|(?:^|[\\s/])bins\\.sh\\b"
             ]
           }
         ]

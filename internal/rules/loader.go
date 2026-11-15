@@ -309,5 +309,8 @@ func LoadOrDefault(dir string, disabledPacks []string) (*Engine, error) {
 	if err := overlay(eng, files); err != nil {
 		return nil, err
 	}
+	if err := checkDisabledOverrides(eng, disabledPacks); err != nil {
+		return nil, err
+	}
 	return eng, nil
 }

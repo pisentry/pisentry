@@ -1,0 +1,11 @@
+{
+  "source": "log",
+  "log_ident": "sudo",
+  "log_msg": "    pi : TTY=pts/0 ; PWD=/home/pi ; USER=root ; COMMAND=sh -c echo provisioned >> /var/log/messages",
+  "user": {
+    "name": "pi"
+  },
+  "process": {
+    "cmdline": "sh -c echo provisioned >> /var/log/messages"
+  }
+}

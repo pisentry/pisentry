@@ -6,13 +6,14 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 
 ### Added
 
-- Rule packs: 70 new built-in rules in five packs embedded in the binary and on by default, `reverse-shells` (21), `privesc-gtfobins` (20), `persistence-linux` (14), `iot-botnets` (8) and `defense-evasion` (7), for 80 built-in rules in all. Every rule has a MITRE technique and positive and negative fixtures. `pisentry check` lists the packs (#15)
-- `rules.disabled_packs` turns off built-in packs by name. An unknown name is an error (#15)
+- Five rule packs, embedded in the binary and on by default, add 70 built-in rules: `reverse-shells` (21), `privesc-gtfobins` (20), `persistence-linux` (14), `iot-botnets` (8) and `defense-evasion` (7). That brings the built-in total to 80. Every rule has a MITRE technique and positive and negative fixtures. `pisentry check` lists the packs (#15)
+- `rules.disabled_packs` turns off built-in packs by name. An unknown name stops the agent from starting, and a `rules.d` rule that reuses the ID of a rule in a disabled pack is rejected (#15)
 
 ### Changed
 
-- The process scan reads a process's uid and parent comm only when the cheap fields show a rule could match, instead of for every process whenever any rule used those fields. Rules can now match on `process.parent_comm` without a scan-wide cost (#15)
-- Kubernetes base pins the v0.2.1 image: the DaemonSet now runs `ghcr.io/pisentry/pisentry:v0.2.1` by digest, and the staging overlay comment shows the same override
+- The process scan reads a process's uid and parent comm only when its name, path and command line show a rule could still match, instead of for every process whenever any rule used those fields. Rules can now match on `process.parent_comm` without a scan-wide cost (#15)
+- PS06 events from rules without the resource hijacking technique (T1496) are titled "Suspicious process" (mining rules keep "Possible cryptominer"), and when several PS06 rules match one process the event carries the highest level (#15)
+- The Kubernetes base pins the v0.2.1 image: the DaemonSet now runs `ghcr.io/pisentry/pisentry:v0.2.1` by digest, and the staging overlay comment shows the same override
 
 ## [0.2.1] - 2026-11-11
 

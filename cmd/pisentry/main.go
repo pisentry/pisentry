@@ -107,6 +107,11 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
+	// A bad pack name is a config error, not a rules.d problem: every later
+	// reload would fail on it, so refuse to start.
+	if _, err := rules.Base(cfg.Rules.DisabledPacks); err != nil {
+		return err
+	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	host := cfg.ResolveHostname()
 
@@ -333,8 +338,8 @@ func loadRules(cfg *config.Config, log *slog.Logger) *rules.Engine {
 	re, err := rules.LoadOrDefault(cfg.Rules.Dir, cfg.Rules.DisabledPacks)
 	if err != nil {
 		log.Error("rules.d rejected; running on built-in rules only", "dir", cfg.Rules.Dir, "err", err)
+		// cmdRun validated disabled_packs before this, so Base cannot fail.
 		if re, err = rules.Base(cfg.Rules.DisabledPacks); err != nil {
-			log.Error("rules.disabled_packs rejected; running with every pack", "err", err)
 			re = rules.Default()
 		}
 	}
@@ -393,17 +398,17 @@ func cmdCheck(args []string) error {
 	if err != nil {
 		return err
 	}
-	off := map[string]bool{}
-	for _, p := range cfg.Rules.DisabledPacks {
-		off[p] = true
+	states, err := rules.PackStates(cfg.Rules.DisabledPacks)
+	if err != nil {
+		return err
 	}
 	var packs []string
-	for _, p := range rules.Packs() {
+	for _, p := range states {
 		state := "on"
-		if off[p.Name] {
+		if !p.Enabled {
 			state = "off"
 		}
-		packs = append(packs, fmt.Sprintf("%s (%d rules, %s)", p.Name, len(p.Rules), state))
+		packs = append(packs, fmt.Sprintf("%s (%d rules, %s)", p.Name, p.Rules, state))
 	}
 	fmt.Printf("packs: %s\n", strings.Join(packs, ", "))
 	fmt.Printf("ok: built-in rules plus %s, %d rules\n", cfg.Rules.Dir, len(re.Rules()))

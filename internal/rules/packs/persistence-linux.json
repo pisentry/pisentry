@@ -24,13 +24,11 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "authorized_keys2?\\b"
-            ]
-          },
-          {
-            "field": "process.cmdline",
-            "regex": [
-              "\\btee\\b|>|\\b(?:cp|mv|install|ln|dd)\\b|\\bsed\\s+-i"
+              ">>?\\s*\\S*authorized_keys2?\\b",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+\\S*authorized_keys2?\\b",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s\\S*authorized_keys2?\\b\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s\\S*authorized_keys2?\\b",
+              "\\bdd\\b[^|;&]*\\bof=\\S*authorized_keys2?\\b"
             ]
           }
         ]
@@ -97,13 +95,11 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "/etc/pam\\.d/"
-            ]
-          },
-          {
-            "field": "process.cmdline",
-            "regex": [
-              "\\btee\\b|>|\\bsed\\s+-i"
+              ">>?\\s*/etc/pam\\.d/",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/etc/pam\\.d/",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/etc/pam\\.d/\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/etc/pam\\.d/",
+              "\\bdd\\b[^|;&]*\\bof=/etc/pam\\.d/"
             ]
           }
         ]
@@ -132,13 +128,12 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/"
-            ]
-          },
-          {
-            "field": "process.cmdline",
-            "regex": [
-              "\\b(?:cp|mv|install|ln|tee|chmod)\\b|>"
+              ">>?\\s*/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\bdd\\b[^|;&]*\\bof=/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/",
+              "\\bchmod\\b[^|;&]*\\s/(?:etc|usr/lib|lib|run|usr/local/lib)/systemd/(?:system|user)-generators/"
             ]
           }
         ]
@@ -268,13 +263,11 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)\\b|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login)\\b"
-            ]
-          },
-          {
-            "field": "process.cmdline",
-            "regex": [
-              "\\btee\\b|>>?\\s*/|\\b(?:cp|mv|install|ln)\\b|\\bsed\\s+-i"
+              ">>?\\s*(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))",
+              "\\bdd\\b[^|;&]*\\bof=(?:/etc/(?:profile(?:\\.d/)?|bash\\.bashrc|zsh/zshrc|environment)|/root/\\.(?:bashrc|profile|bash_profile|zshrc|bash_login))"
             ]
           }
         ]
@@ -381,13 +374,11 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "/etc/sudoers"
-            ]
-          },
-          {
-            "field": "process.cmdline",
-            "regex": [
-              "\\btee\\b|>|\\becho\\b"
+              ">>?\\s*/etc/sudoers",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/etc/sudoers",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/etc/sudoers\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/etc/sudoers",
+              "\\bdd\\b[^|;&]*\\bof=/etc/sudoers"
             ]
           }
         ]
@@ -480,13 +471,12 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "/etc/update-motd\\.d/"
-            ]
-          },
-          {
-            "field": "process.cmdline",
-            "regex": [
-              "\\b(?:cp|mv|install|ln|tee|chmod)\\b|>"
+              ">>?\\s*/etc/update-motd\\.d/",
+              "\\btee\\b(?:\\s+-\\S+)*\\s+/etc/update-motd\\.d/",
+              "\\b(?:cp|mv|install|ln)\\b[^|;&]*\\s/etc/update-motd\\.d/\\S*\\s*(?:$|[|;&])",
+              "\\bsed\\s+-i\\b[^|;&]*\\s/etc/update-motd\\.d/",
+              "\\bdd\\b[^|;&]*\\bof=/etc/update-motd\\.d/",
+              "\\bchmod\\b[^|;&]*\\s/etc/update-motd\\.d/"
             ]
           }
         ]

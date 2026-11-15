@@ -24,7 +24,7 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "\\bfind\\b.*\\s-exec(?:dir)?\\s+(?:\\S*/)?(?:ba|da|z|k)?sh(?:\\s+-p)?\\s+(?:;|\\+)"
+              "\\bfind\\b[^|;&]*\\s-exec(?:dir)?\\s+(?:\\S*/)?(?:ba|da|z|k)?sh(?:\\s+-p)?\\s+(?:;|\\+)"
             ]
           }
         ]
@@ -56,7 +56,7 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "\\b(?:vim?|nvim|vim\\.basic|vim\\.tiny|rvim|view)\\b.*\\s(?:-c|\\+)\\s*:?\\s*(?:!|(?:py3?|python3?|lua|perl|ruby)\\s)"
+              "\\b(?:vim?|nvim|vim\\.basic|vim\\.tiny|rvim|view)\\b[^|;&]*\\s(?:-c|\\+)\\s*:?\\s*(?:!|(?:py3?|python3?|lua|perl|ruby)\\s)"
             ]
           }
         ]
@@ -281,7 +281,7 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "\\brsync\\b.*\\s-e\\s+[\\\"']?(?:\\S*/)?(?:ba|da|z|k)?sh\\s+-c"
+              "\\brsync\\b[^|;&]*\\s-e\\s+[\\\"']?(?:\\S*/)?(?:ba|da|z|k)?sh\\s+-c"
             ]
           }
         ]
@@ -378,7 +378,7 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "\\b(?:docker|podman|nerdctl)\\s+(?:container\\s+)?run\\b.*(?:-v\\s*|--volume[= ])/:/"
+              "\\b(?:docker|podman|nerdctl)\\s+(?:container\\s+)?run\\b[^|;&]*(?:-v\\s*|--volume[= ])/:/"
             ]
           }
         ],
@@ -422,7 +422,7 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "\\b(?:docker|podman|nerdctl)\\s+(?:container\\s+)?run\\b.*(?:-v\\s*|--volume[= ])/:/"
+              "\\b(?:docker|podman|nerdctl)\\s+(?:container\\s+)?run\\b[^|;&]*(?:-v\\s*|--volume[= ])/:/"
             ]
           }
         ],
@@ -461,8 +461,8 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "\\bnmap\\b.*--script[= ]/(?:tmp|var/tmp|dev/shm|home|root)/",
-              "\\bnmap\\b.*--interactive\\b"
+              "\\bnmap\\b[^|;&]*--script[= ]/(?:tmp|var/tmp|dev/shm|home|root)/",
+              "\\bnmap\\b[^|;&]*--interactive\\b"
             ]
           }
         ]
@@ -603,8 +603,8 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "(?:^|/)install\\s(?:.*\\s)?-m\\s*0?[2467][0-7]{3}\\b",
-              "(?:^|/)install\\s(?:.*\\s)?-m\\s*\\S*[ug][+=]s"
+              "(?:^|/)install\\s(?:[^|;&]*\\s)?-m\\s*0?[2467][0-7]{3}\\b",
+              "(?:^|/)install\\s(?:[^|;&]*\\s)?-m\\s*\\S*[ug][+=]s"
             ]
           }
         ]
@@ -666,7 +666,7 @@
           {
             "field": "process.cmdline",
             "regex": [
-              "\\bgdb\\b.*-ex\\s+[\\\"']?(?:!|shell\\s|python\\s|py\\s)"
+              "\\bgdb\\b[^|;&]*-ex\\s+[\\\"']?(?:!|shell\\s|python\\s|py\\s)"
             ]
           }
         ]
