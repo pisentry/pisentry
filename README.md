@@ -30,7 +30,7 @@
 <p align="center"><sub>A real recording, not a mock-up: the top pane fires harmless stand-ins for eight attacks, the bottom pane is <code>pisentry run</code> piped through <a href="scripts/demo/stream.jq">jq</a>, and the last frame is <code>pisentry report</code>. Rebuild it with <code>make demo</code> (<a href="scripts/demo/">how</a>).</sub></p>
 
 - Standard library only. No third-party Go modules, nothing to audit but this repo and the Go toolchain
-- About 7 MB on disk, about 12 MB resident. Under 1% CPU on a 2 GB Pi
+- A 7–8 MiB binary that uses 10–30 MiB of memory and under 1% CPU on a 2 GB Pi
 - arm64 (Pi 4 and 5), armv7 (32-bit Pi OS), amd64
 - Runs as a hardened systemd service or as a Kubernetes DaemonSet managed by Flux
 - Raspberry Pi OS, Ubuntu, Debian and RHEL-family hosts, with journald or classic syslog files
@@ -119,7 +119,7 @@ git clone https://github.com/pisentry/pisentry && cd pisentry
 sudo ./deploy/install.sh
 ```
 
-The unit runs as root to read `/etc/shadow`, other users' `/proc` and the journal, and gives up everything else: two capabilities, a syscall filter, a read-only system and a 256 MB memory cap.
+The unit runs as root to read `/etc/shadow`, other users' `/proc` and the journal, and gives up everything else: two capabilities, a syscall filter, a read-only system and a 256 MiB memory cap.
 
 **Kubernetes with Flux:** copy `deploy/kubernetes/` into your cluster repo. You get a DaemonSet pinned by digest, a NetworkPolicy, a PodMonitor, the alert rules and the Grafana dashboard.
 
