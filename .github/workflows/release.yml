@@ -25,11 +25,12 @@ jobs:
           go-version-file: go.mod
           check-latest: true
           cache: false
-      # The tag name reaches a shell below. Only a plain release tag gets that far.
+      # The tag name reaches a shell below. Only a release tag (v1.2.3) or a
+      # release candidate (v1.2.3-rc.1) gets that far.
       - name: Check tag
         env:
           TAG: ${{ github.ref_name }}
-        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $TAG"; exit 1; }'
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || { echo "not a release tag: $TAG"; exit 1; }'
       - run: go test ./...
       - name: Build
         env:
@@ -45,11 +46,14 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           awk -v v="$v" '/^## \[/{p = index($0, "[" v "]") > 0} p' CHANGELOG.md > notes.md
           test -s notes.md || echo "pisentry ${GITHUB_REF_NAME}" > notes.md
+      # A release candidate is a pre-release, so it never becomes "Latest".
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          pre=()
+          [[ "$GITHUB_REF_NAME" == *-rc.* ]] && pre=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" dist/* "${pre[@]}" \
             --verify-tag --title "pisentry $GITHUB_REF_NAME" --notes-file notes.md
 
   # Signs the rule packs as a bundle for `pisentry update-patterns` and
@@ -58,8 +62,11 @@ jobs:
   # signed until a maintainer approves this job. One-time setup and key
   # rotation: docs/rule-schema.md ("Signed bundles"). Re-running this job
   # later signs the same files with a newer version and a fresh expiry.
+  # Release candidates get no bundle: update-patterns reads the latest final
+  # release, so an rc bundle would never be fetched.
   rules-bundle:
     needs: binaries # the release must exist to attach to
+    if: ${{ !contains(github.ref_name, '-rc.') }}
     runs-on: ubuntu-latest
     environment: rules-signing
     permissions:
@@ -132,9 +139,10 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ github.ref_name }}
             org.opencontainers.image.revision=${{ github.sha }}
+          # :latest moves only on a final release, never on a release candidate.
           tags: |
             ${{ env.IMAGE }}:${{ github.ref_name }}
-            ${{ env.IMAGE }}:latest
+            ${{ !contains(github.ref_name, '-rc.') && format('{0}:latest', env.IMAGE) || '' }}
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
       # Sign the manifest list by digest, never by tag: a tag can be moved,
       # a digest cannot. The signature is stored next to the image in ghcr.io.
