@@ -19,6 +19,7 @@ All notable changes to pisentry are recorded here. The format follows [Keep a Ch
 - The process scan reads a process's uid and parent comm only when its name, path and command line show a rule could still match, instead of for every process whenever any rule used those fields. Rules can now match on `process.parent_comm` without a scan-wide cost (#15)
 - PS06 events from rules without the resource hijacking technique (T1496) are titled "Suspicious process" (mining rules keep "Possible cryptominer"), and when several PS06 rules match one process the event carries the highest level (#15)
 - The Kubernetes base pins the v0.2.1 image: the DaemonSet now runs `ghcr.io/pisentry/pisentry:v0.2.1` by digest, and the staging overlay comment shows the same override
+- A release candidate tag such as `v0.2.2-rc.1` publishes a GitHub pre-release and a signed image under that tag only. `:latest` does not move and no rule bundle is signed, so agents and `update-patterns` keep using the last final release
 
 ## [0.2.1] - 2026-11-11
 
